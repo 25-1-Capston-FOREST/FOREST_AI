@@ -8,7 +8,7 @@ from datetime import datetime
 import os
 import mysql.connector
 import logging
-from recommendation.algorithm import RecommendationAlgorithm
+from recommendation.recommendation import RecommendationAlgorithm
 from config.settings import get_database_config
 
 
