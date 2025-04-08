@@ -294,6 +294,13 @@ class RecommendationAlgorithm:
         except Exception as e:
             self._logger.error(f"추천 리스트 생성 중 오류 발생: {str(e)}")
             return []
+        
+    def api_test_recommendation(user_id):
+        if user_id == "12345":
+            items = [123, 1231, 121, 1222]
+        else:
+            items = []
+        return items
 
 def main():
 

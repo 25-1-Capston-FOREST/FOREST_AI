@@ -2,10 +2,19 @@
 ## 클라이언트 요청 수신 -> 추천 알고리즘 모듈과 연동해 서버로 추천 결과 반환
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import logging
+import mysql.connector
+from mysql.connector import Error
+from dotenv import load_dotenv
+import os
 from recommendation.recommendation import RecommendationAlgorithm
 
+# .env 파일 로드
+load_dotenv()
+
 app = Flask(__name__)
+CORS(app)
 
 # 로깅 설정
 logging.basicConfig(
@@ -17,21 +26,72 @@ logger = logging.getLogger(__name__)
 # 추천 알고리즘 인스턴스 생성
 recommender = RecommendationAlgorithm()
 
-@app.route("/api/recommendations", methods=["GET"])
-def get_recommendations():
+# 데이터베이스 연결 설정
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'database': os.getenv('DB_DATABASE')
+}
+
+def get_db_connection():
     try:
-        # 쿼리 파라미터에서 userId 추출
-        user_id = request.args.get("userId")
-        if not user_id:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        return connection
+    except Error as e:
+        print(f"데이터베이스 연결 실패: {e}")
+        return None
+
+
+@app.route("/recommendations", methods=["POST"])
+def create_recommendations():
+    try:
+        # Request body에서 JSON 데이터 가져오기
+        data = request.get_json()
+        
+        # user_id 검증
+        if not data or 'user_id' not in data:
             # user_id 없는 경우 400 에러 처리
             return jsonify({
                 "status": "error",
                 "message": "유효하지 않은 사용자 ID입니다."
             }), 400
+        
+        user_id = data['user_id']
 
-        # 예시 로직: userId가 "12345"인 경우 추천 리스트가 있는 경우, 아닌 경우 빈 리스트 반환
+        # # db 연결
+        # connection = get_db_connection()
+        # if not connection:
+        #     return jsonify({
+        #         'status': 'error',
+        #         'message': '데이터베이스 연결 실패'
+        #     }), 500
+        
+        # cursor = connection.cursor(dictionary=True)
+
+        # # 여가 데이터 & 사용자 프로필 받아오기
+        # query = """
+        
+        # """
+        # cursor.execute(query, (user_id,))
+        # results = cursor.fetchall()
+
+        # 추천 목록 생성
+        # recommendation_list = recommender.api_test_recommendation(user_id)
+
+        # 추천 목록에 아이템이 하나 이상 있을 때 
+        # if len(recommendation_list) > 0:
+        #     recommendations = recommendation_list
+        #     message = "추천 상품 목록을 성공적으로 가져왔습니다."
+        # 추천 목록에 아이템이 하나도 없을 때
+        # else:
+        #     recommendations = []
+        #     message = "추천 상품 목록이 없습니다."
+
+
+        # 테스트 용 코드
         if user_id == "12345":
-            recommendations = [13, 25, 38, 99, 102]
+            recommendations = [13, 1234 ,125, 654]
             message = "추천 상품 목록을 성공적으로 가져왔습니다."
         else:
             recommendations = []
@@ -50,6 +110,7 @@ def get_recommendations():
             "status" : "error",
             "message": "서버 내부 오류가 발생했습니다."
         }),500
+    
 
 if __name__ == '__main__':
     # 로컬 서버를 5000번 포트에서 디버그 모드로 실행
