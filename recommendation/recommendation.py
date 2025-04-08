@@ -8,36 +8,12 @@ import json
 from enum import Enum
 from dataclasses import dataclass
 import re
-
-file_path = "/data/demo_date.json"
-
-class ContentTypeError(Exception):
-    """컨텐츠 타입 관련 예외"""
-    pass
-
-class ContentType(Enum):
-    MOVIE = "movie"
-    PERFORMANCE = "performance"
-    EXHIBITION = "exhibition"
-    
-    @classmethod
-    def get_valid_types(cls):
-        """유효한 컨텐츠 타입 목록을 반환합니다."""
-        return [member.value for member in cls]
-
-
-@dataclass
-class UserProfile:
-    keywords: List[str]  # 선호 키워드
-    type_preferences: Dict[ContentType, int]  # 각 타입별 선호도
-    genre_preferences: Dict[ContentType, List[str]]  # 각 타입별 선호 장르
+from preprocessor import DataPreprocessor, ContentType, UserProfile
 
 class RecommendationAlgorithm:
     def __init__(self):
-        self._vectorizer = TfidfVectorizer(
-            max_features=5000,
-            ngram_range=(1, 2)
-        )
+        self.preprocessor = DataPreprocessor()
+        self.item_data = {}
         
         # 타입별 목표 비율 설정 (전체 합 1)
         self._type_ratios = {
@@ -59,117 +35,13 @@ class RecommendationAlgorithm:
             level=logging.INFO
         )
 
-    # 1. JSON 파일 로드
-    def load_json_file(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return json.load(file)
-
-    # 2. JSON 데이터를 텍스트로 변환
-    def json_to_text(json_data):
-        # 모든 키워드를 하나의 문자열로 합침
-        if isinstance(json_data, dict):
-            return ' '.join([str(v) for v in json_data.values()])
-        elif isinstance(json_data, list):
-            return ' '.join([str(item) for item in json_data])
-        return str(json_data)
-
-    def _data_preprocessing(self):
-        ## movie - title, genre_nm, director, actors, keywords
-        ## performance - title, cast, genre, keywords
-        ## exhibition - title, exhibition_genre, keywords
-
-        try:
-            processed_data = 1
-            return processed_data
-        except Exception as e:
-            self._logger.error(f"데이터 전처리 중 오류 발생: {str(e)}")
-            return ""
-        
-        
-        
-
-    def _normalize_text(self, text: str) -> str:
-        """텍스트 정규화"""
-        try:
-            text = text.lower()
-            text = re.sub(r'[^\w\s]', ' ', text)
-            text = re.sub(r'\d+', '', text)
-            text = re.sub(r'\s+', ' ', text)
-            return text.strip()
-        except Exception as e:
-            self._logger.error(f"텍스트 정규화 중 오류 발생: {str(e)}")
-            return text
-
-    def _extract_item_text(self, item_data: Dict[str, Any]) -> str:
-        """아이템 데이터에서 관련 텍스트 추출"""
-        try:
-            text_parts = []
-            
-            # 제목 추가
-            if 'title' in item_data:
-                text_parts.append(str(item_data['title']))
-            
-            # 장르 추가
-            if 'genre' in item_data:
-                if isinstance(item_data['genre'], list):
-                    text_parts.extend(item_data['genre'])
-                else:
-                    text_parts.append(str(item_data['genre']))
-            
-            # 키워드/태그 추가
-            for field in ['keywords', 'tags']:
-                if field in item_data:
-                    if isinstance(item_data[field], list):
-                        text_parts.extend(item_data[field])
-                    else:
-                        text_parts.append(str(item_data[field]))
-            
-            return ' '.join(text_parts)
-        except Exception as e:
-            self._logger.error(f"텍스트 추출 중 오류 발생: {str(e)}")
-            return ""
-
-    def _get_content_type(self, item_data: Dict[str, Any]) -> ContentType:
-        """
-        아이템 데이터에서 컨텐츠 타입을 추출하고 검증
-        
-        Args:
-            item_data: 아이템 데이터 딕셔너리
-            
-        Returns:
-            ContentType: 검증된 컨텐츠 타입
-            
-        Raises:
-            ContentTypeError: 컨텐츠 타입이 없거나 유효하지 않은 경우
-        """
-        try:
-            if 'type' not in item_data:
-                raise ContentTypeError(
-                    "컨텐츠 타입이 지정되지 않았습니다. "
-                    f"유효한 타입: {ContentType.get_valid_types()}"
-                )
-
-            type_str = item_data['type']
-            if not isinstance(type_str, str):
-                raise ContentTypeError(
-                    f"컨텐츠 타입은 문자열이어야 합니다. "
-                    f"입력된 타입: {type(type_str)}"
-                )
-
-            if type_str not in ContentType.get_valid_types():
-                raise ContentTypeError(
-                    f"유효하지 않은 컨텐츠 타입입니다: {type_str}. "
-                    f"유효한 타입: {ContentType.get_valid_types()}"
-                )
-
-            return ContentType(type_str)
-
-        except ContentTypeError as e:
-            self._logger.error(f"컨텐츠 타입 오류: {str(e)}")
-            raise
-        except Exception as e:
-            self._logger.error(f"예상치 못한 오류 발생: {str(e)}")
-            raise ContentTypeError(f"컨텐츠 타입 처리 중 오류 발생: {str(e)}")
+    def prepare_item_data(self, items: List[Dict], content_type: ContentType):
+        """아이템 데이터 준비"""
+        processed_data = self.preprocessor.preprocess_items(items, content_type)
+        if processed_
+            self.item_data[content_type] = processed_data
+            return True
+        return False
 
     def calculate_similarity(self, 
                           item_data: Dict[str, Any], 
@@ -289,6 +161,7 @@ class RecommendationAlgorithm:
             self._logger.info(
                 f"추천 리스트 생성 완료: {len(recommendations)}개 항목"
             )
+            ## 리스트 정렬 내림차순 (post 응답에서 필요)
             return recommendations
 
         except Exception as e:
@@ -298,7 +171,7 @@ class RecommendationAlgorithm:
     def api_test_recommendation(self, user_id):
         try:
             if user_id == "1":
-                items = [123, 1231, 121, 1222]
+                items = [12, 121, 31, 123]
             else:
                 items = []
             return items
