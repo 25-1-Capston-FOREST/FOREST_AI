@@ -8,13 +8,11 @@ import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
 import os
+#from database import DatabaseService
 from recommendation.recommendation import RecommendationAlgorithm
 
 # .env 파일 로드
 load_dotenv()
-
-app = Flask(__name__)
-CORS(app)
 
 # 로깅 설정
 logging.basicConfig(
@@ -23,8 +21,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 추천 알고리즘 인스턴스 생성
-recommender = RecommendationAlgorithm()
+app = Flask(__name__)
+CORS(app)
 
 # 데이터베이스 연결 설정
 DB_CONFIG = {
@@ -34,20 +32,17 @@ DB_CONFIG = {
     'database': os.getenv('DB_DATABASE')
 }
 
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
-        print(f"데이터베이스 연결 실패: {e}")
-        return None
-
+# 인스턴스 생성&초기화
+#db_service = DatabaseService(DB_CONFIG)
+recommender = RecommendationAlgorithm()
+logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
 
 @app.route("/recommendations", methods=["POST"])
 def create_recommendations():
     try:
-        # Request body에서 JSON 데이터 가져오기
-        data = request.get_json()
+        logging.info("recommendations 엔드포인트 호출됨")
+        data = request.get_json()   # Request body에서 JSON 데이터 가져오기
+        logging.debug(f"수신된 데이터: {data}")
         
         # user_id 검증
         if not data or 'user_id' not in data:
@@ -58,23 +53,7 @@ def create_recommendations():
             }), 400
         
         user_id = data['user_id']
-
-        # # db 연결
-        # connection = get_db_connection()
-        # if not connection:
-        #     return jsonify({
-        #         'status': 'error',
-        #         'message': '데이터베이스 연결 실패'
-        #     }), 500
-        
-        # cursor = connection.cursor(dictionary=True)
-
-        # # 여가 데이터 & 사용자 프로필 받아오기
-        # query = """
-        
-        # """
-        # cursor.execute(query, (user_id,))
-        # results = cursor.fetchall()
+        logging.info(f"처리 중인 user_id: {user_id}")
 
         # 추천 목록 생성
         # recommendation_list = recommender.api_test_recommendation(user_id)
@@ -91,18 +70,39 @@ def create_recommendations():
 
         # 테스트 용 코드
         if user_id == "12345":
-            recommendations = [13, 1234 ,125, 654]
-            message = "추천 상품 목록을 성공적으로 가져왔습니다."
+            logging.debug("테스트 사용자 ID 감지됨")
+            try:
+                logging.info("추천 알고리즘 실행 시작")
+            #recommendations = [13, 1234 ,125, 654]
+                recommendations = recommender.api_test_recommendation(user_id)
+                logging.info(f"추천 결과 생성됨: {recommendations}")
+                return jsonify({
+                    "status": "success",
+                    "recommendations": recommendations,
+                    "message": "추천 상품 목록을 성공적으로 가져왔습니다."
+                })
+            except Exception as e:
+                logging.error(f"추천 생성 중 오류 발생: {str(e)}")
+                return jsonify({
+                    "status": "error",
+                    "message": f"추천 생성 중 오류 발생: {str(e)}"
+                }),500
+            #message = "추천 상품 목록을 성공적으로 가져왔습니다."
         else:
             recommendations = []
-            message = "추천 상품 목록이 없습니다."
+            return jsonify({
+                "status": "success",
+                "recommendations": recommendations,
+                "message": "추천 상품 목록이 없습니다."
+            })
+        #     message = 
 
-        response = {
-            "status": "success",
-            "recommendations": recommendations,
-            "message": message
-        }
-        return jsonify(response), 200
+        # response = {
+        #     "status": "success",
+        #     "recommendations": recommendations,
+        #     "message": message
+        # }
+        # return jsonify(response), 200
     
     except Exception as e:
         # 서버 내부 오류 발생 시 500 에러 처리
