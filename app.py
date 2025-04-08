@@ -8,7 +8,6 @@ import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
 import os
-#from database import DatabaseService
 from recommendation.recommendation import RecommendationAlgorithm
 
 # .env 파일 로드
@@ -24,16 +23,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# 데이터베이스 연결 설정
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'database': os.getenv('DB_DATABASE')
-}
-
 # 인스턴스 생성&초기화
-#db_service = DatabaseService(DB_CONFIG)
 recommender = RecommendationAlgorithm()
 logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
 
@@ -69,7 +59,7 @@ def create_recommendations():
 
 
         # 테스트 용 코드
-        if user_id == "12345":
+        if user_id == "1":
             logging.debug("테스트 사용자 ID 감지됨")
             try:
                 logging.info("추천 알고리즘 실행 시작")
@@ -111,7 +101,5 @@ def create_recommendations():
             "message": "서버 내부 오류가 발생했습니다."
         }),500
     
-
 if __name__ == '__main__':
-    # 로컬 서버를 5000번 포트에서 디버그 모드로 실행
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

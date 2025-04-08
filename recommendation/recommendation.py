@@ -297,7 +297,7 @@ class RecommendationAlgorithm:
         
     def api_test_recommendation(self, user_id):
         try:
-            if user_id == "12345":
+            if user_id == "1":
                 items = [123, 1231, 121, 1222]
             else:
                 items = []
