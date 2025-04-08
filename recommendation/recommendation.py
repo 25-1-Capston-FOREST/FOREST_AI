@@ -79,7 +79,7 @@ class RecommendationAlgorithm:
         ## exhibition - title, exhibition_genre, keywords
 
         try:
-            data = 
+            processed_data = 1
             return processed_data
         except Exception as e:
             self._logger.error(f"데이터 전처리 중 오류 발생: {str(e)}")
