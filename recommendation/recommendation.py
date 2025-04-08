@@ -4,10 +4,12 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 import logging
+import json
 from enum import Enum
 from dataclasses import dataclass
 import re
 
+file_path = "/data/demo_date.json"
 
 class ContentTypeError(Exception):
     """컨텐츠 타입 관련 예외"""
@@ -56,6 +58,35 @@ class RecommendationAlgorithm:
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             level=logging.INFO
         )
+
+    # 1. JSON 파일 로드
+    def load_json_file(file_path):
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+
+    # 2. JSON 데이터를 텍스트로 변환
+    def json_to_text(json_data):
+        # 모든 키워드를 하나의 문자열로 합침
+        if isinstance(json_data, dict):
+            return ' '.join([str(v) for v in json_data.values()])
+        elif isinstance(json_data, list):
+            return ' '.join([str(item) for item in json_data])
+        return str(json_data)
+
+    def _data_preprocessing(self):
+        ## movie - title, genre_nm, director, actors, keywords
+        ## performance - title, cast, genre, keywords
+        ## exhibition - title, exhibition_genre, keywords
+
+        try:
+            data = 
+            return processed_data
+        except Exception as e:
+            self._logger.error(f"데이터 전처리 중 오류 발생: {str(e)}")
+            return ""
+        
+        
+        
 
     def _normalize_text(self, text: str) -> str:
         """텍스트 정규화"""
