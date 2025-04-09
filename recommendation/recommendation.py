@@ -13,6 +13,7 @@ sys.path.append('/home/ubuntu/FOREST_AI')
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
 from recommendation.preprocessor import DataPreprocessor, ContentType, UserProfile
+#from preprocessor import DataPreprocessor, ContentType, UserProfile
 import scipy.sparse as sp
 from mysql.connector import Error as DatabaseError
 from datetime import datetime
@@ -122,7 +123,7 @@ class RecommendationAlgorithm:
         """
         try:
             # 1. 데이터베이스에서 사용자 데이터 가져오기
-            raw_user_data = self._user_queries.get_user_data(user_id)
+            raw_user_data = self._user_queries.get_user_preferences(user_id)
             if not raw_user_data:
                 self._logger.warning(f"사용자 ID {user_id}에 대한 데이터를 찾을 수 없습니다.")
                 return False
@@ -135,13 +136,13 @@ class RecommendationAlgorithm:
 
             # 3. 처리된 사용자 데이터 저장
             self.user_data[user_id] = {
-                'profile': processed_user_data['profile'],
+                #'profile': processed_user_data['profile'],
                 'vector': processed_user_data['vector'],
                 'last_updated': datetime.now()
             }
 
             self._logger.info(f"사용자 ID {user_id}의 데이터 준비 완료")
-            return user_data
+            return self.user_data
 
         except Exception as e:
             self._logger.error(f"사용자 데이터 준비 중 오류 발생: {str(e)}")
@@ -287,22 +288,24 @@ class RecommendationAlgorithm:
             # 모든 컨텐츠 타입의 아이템을 하나의 리스트로 통합
             all_items,vectorizer = self.prepare_item_data()
             all_item_vectors = []
-            print(all_items)
+            #print(all_items)
             if not all_items:
                 self._logger.error("추천할 아이템 데이터가 없습니다.")
                 return []
 
-            processed_user_data = self.preprocessor.preprocess_user_data(user_profile,vectorizer)
-            
+            #processed_user_data = self.preprocessor.preprocess_user_data(user_profile,vectorizer)
+            processed_user_data = self.prepare_user_data(user_id, vectorizer)
+
+
             if processed_user_data is None:
                 self._logger.warning("사용자 데이터 전처리 실패")
                 return False
 
             self.user_data[user_id] = {
-                'vector': processed_user_data['vector'],
+                'vector': processed_user_data[user_id]['vector'],
                 'last_updated': datetime.now()
             }
-            self._logger.info(f"사용자 ID {user_id}의 데이터 준비 완료")
+            self._logger.info(f"사용자 ID {user_id}의 데이터 준비 완료1")
             
             # for content_type in ContentType:
             #     items = self.item_data.get(content_type, [])
@@ -414,7 +417,7 @@ class RecommendationAlgorithm:
 
                 # 상위 추천 결과 로깅
                 self._logger.info("=== 상위 추천 결과 ===")
-                for idx, item in enumerate(recommendations[:50], 1):
+                for idx, item in enumerate(recommendations[:10], 1):
                     self._logger.info(
                         f"{idx}. {item['title']} "
                         f"(유사도: {item['similarity']:.4f}, "
@@ -422,7 +425,7 @@ class RecommendationAlgorithm:
                     )
 
                 # ID만 추출하여 리스트로 반환
-                recommendation_list = [item['activity_id'] for item in recommendations[:50]]
+                recommendation_list = [item['activity_id'] for item in recommendations[:30]]
                 return recommendation_list
 
             except Exception as e:
