@@ -9,6 +9,8 @@ from mysql.connector import Error
 from dotenv import load_dotenv
 import os
 from recommendation.recommendation import RecommendationAlgorithm
+from database.user_queries import UserQueries
+from database.item_queries import ItemQueries
 
 # .env 파일 로드
 load_dotenv()
@@ -24,6 +26,8 @@ app = Flask(__name__)
 CORS(app)
 
 # 인스턴스 생성&초기화
+user_queries = UserQueries()
+item_queries = ItemQueries()
 recommender = RecommendationAlgorithm()
 logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
 
@@ -46,53 +50,58 @@ def create_recommendations():
         logging.info(f"처리 중인 user_id: {user_id}")
 
         # 추천 목록 생성
-        # recommendation_list = recommender.api_test_recommendation(user_id)
-
-        # 추천 목록에 아이템이 하나 이상 있을 때 
-        # if len(recommendation_list) > 0:
-        #     recommendations = recommendation_list
-        #     message = "추천 상품 목록을 성공적으로 가져왔습니다."
-        # 추천 목록에 아이템이 하나도 없을 때
-        # else:
-        #     recommendations = []
-        #     message = "추천 상품 목록이 없습니다."
-
-
-        # 테스트 용 코드
-        if user_id == "1":
-            logging.debug("테스트 사용자 ID 감지됨")
-            try:
-                logging.info("추천 알고리즘 실행 시작")
-            #recommendations = [13, 1234 ,125, 654]
-                recommendations = recommender.api_test_recommendation(user_id)
-                logging.info(f"추천 결과 생성됨: {recommendations}")
+        try:
+            logging.info("추천 알고리즘 실행 시작")
+            recommendation_list = recommender.get_recommendations(user_id)
+            logging.info(f"추천 결과 생성됨: {recommendation_list}")
+            
+            if len(recommendation_list) > 0:
                 return jsonify({
                     "status": "success",
-                    "recommendations": recommendations,
+                    "recommendations": recommendation_list,
                     "message": "추천 상품 목록을 성공적으로 가져왔습니다."
                 })
-            except Exception as e:
-                logging.error(f"추천 생성 중 오류 발생: {str(e)}")
+            else:
                 return jsonify({
-                    "status": "error",
-                    "message": f"추천 생성 중 오류 발생: {str(e)}"
-                }),500
-            #message = "추천 상품 목록을 성공적으로 가져왔습니다."
-        else:
-            recommendations = []
-            return jsonify({
-                "status": "success",
-                "recommendations": recommendations,
-                "message": "추천 상품 목록이 없습니다."
-            })
-        #     message = 
+                    "status": "fail",
+                    "recommendations": [],
+                    "message": "추천 상품 목록이 없습니다."
+                })
 
-        # response = {
-        #     "status": "success",
-        #     "recommendations": recommendations,
-        #     "message": message
-        # }
-        # return jsonify(response), 200
+        except Exception as e:
+            logging.error(f"추천 생성 중 오류 발생: {str(e)}")
+            return jsonify({
+                "status": "error",
+                "message": f"추천 생성 중 오류 발생: {str(e)}"
+            }),500
+
+        # # 테스트 용 코드
+        # if user_id == "1":
+        #     logging.debug("테스트 사용자 ID 감지됨")
+        #     try:
+        #         logging.info("추천 알고리즘 실행 시작")
+        #         recommendations = [13, 1234 ,125, 654]
+        #         #recommendations = recommender.api_test_recommendation(user_id)
+        #         logging.info(f"추천 결과 생성됨: {recommendations}")
+        #         return jsonify({
+        #             "status": "success",
+        #             "recommendations": recommendations,
+        #             "message": "추천 상품 목록을 성공적으로 가져왔습니다."
+        #         })
+        #     except Exception as e:
+        #         logging.error(f"추천 생성 중 오류 발생: {str(e)}")
+        #         return jsonify({
+        #             "status": "error",
+        #             "message": f"추천 생성 중 오류 발생: {str(e)}"
+        #         }),500
+        #     #message = "추천 상품 목록을 성공적으로 가져왔습니다."
+        # else:
+        #     recommendations = []
+        #     return jsonify({
+        #         "status": "success",
+        #         "recommendations": recommendations,
+        #         "message": "추천 상품 목록이 없습니다."
+        #     })
     
     except Exception as e:
         # 서버 내부 오류 발생 시 500 에러 처리
