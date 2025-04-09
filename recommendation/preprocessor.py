@@ -1,9 +1,9 @@
-# preprocessor.py
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
-from typing import List, Dict
-from sklearn.feature_extraction.text import TfidfVectorizer
-import logging
+import numpy as np
 from enum import Enum
+import logging
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 class ContentTypeError(Exception):
     """컨텐츠 타입 관련 예외"""
@@ -27,100 +27,109 @@ class UserProfile:
 
 class DataPreprocessor:
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         self._vectorizer = TfidfVectorizer(
-            analyzer='word',
-            token_pattern=r'\w+',
-            max_features=5000,
-            ngram_range=(1, 2)
+            max_features=1000,  # 차원 수 제한
+            lowercase=True,     # 소문자 변환
+            ngram_range=(1, 2)  # 단일 단어와 두 단어 조합 모두 사용
         )
-
-    def _get_content_type(self, item_data: Dict[str, Any]) -> ContentType:
+        self._is_fitted = False  # vectorizer의 학습 여부 체크
+        
+    def preprocess_items(self, items: List[Dict]) -> Optional[Dict]:
         """
-        아이템 데이터에서 컨텐츠 타입을 추출하고 검증
+        아이템 데이터 전처리
         
         Args:
-            item_data: 아이템 데이터 딕셔너리
-            
-        Returns:
-            ContentType: 검증된 컨텐츠 타입
-            
-        Raises:
-            ContentTypeError: 컨텐츠 타입이 없거나 유효하지 않은 경우
+            items: 전처리할 아이템 리스트
+            content_type: 컨텐츠 타입 (호환성을 위해 유지)
         """
         try:
-            if 'type' not in item_data:
-                raise ContentTypeError(
-                    "컨텐츠 타입이 지정되지 않았습니다. "
-                    f"유효한 타입: {ContentType.get_valid_types()}"
-                )
-
-            type_str = item_data['type']
-            if not isinstance(type_str, str):
-                raise ContentTypeError(
-                    f"컨텐츠 타입은 문자열이어야 합니다. "
-                    f"입력된 타입: {type(type_str)}"
-                )
-
-            if type_str not in ContentType.get_valid_types():
-                raise ContentTypeError(
-                    f"유효하지 않은 컨텐츠 타입입니다: {type_str}. "
-                    f"유효한 타입: {ContentType.get_valid_types()}"
-                )
-
-            return ContentType(type_str)
-
-        except ContentTypeError as e:
-            self._logger.error(f"컨텐츠 타입 오류: {str(e)}")
-            raise
-        except Exception as e:
-            self._logger.error(f"예상치 못한 오류 발생: {str(e)}")
-            raise ContentTypeError(f"컨텐츠 타입 처리 중 오류 발생: {str(e)}")
-
-    def preprocess_items(self, items: List[Dict], content_type: ContentType):
-        """아이템 데이터 전처리 및 벡터화"""
-        try:
-            # 아이템 데이터 전처리
             processed_items = []
+            texts = []
+            
             for item in items:
-                processed_text = self._preprocess_item(item)
+                processed_text = self._preprocess_text(item)
                 if processed_text:
+                    texts.append(processed_text)
                     processed_items.append({
-                        'id': item['activity_id'],
+                        'id': item.get('activity_id'),
                         'text': processed_text,
                         'original': item
                     })
-
+            
             if not processed_items:
-                logging.warning(f"No valid item data for type: {content_type.value}")
                 return None
-
-            # 텍스트 데이터 벡터화
-            texts = [item['text'] for item in processed_items]
-            vectors = self._vectorizer.fit_transform(texts)
-
+                
+            # vectorizer 학습 및 변환
+            if not self._is_fitted:
+                self._vectorizer.fit(texts)
+                self._is_fitted = True
+                
+            vector = self._vectorizer.transform(texts)
+            self._logger.info(f"생성된  벡터 shape: {vector.shape}")
+            self._logger.info(f"벡터 통계 - 평균: {vector.mean():.4f}")
+                
+            
             return {
-                'vectors': vectors,
                 'items': processed_items,
+                'vector': vector,
                 'vectorizer': self._vectorizer
             }
+            
+        except Exception as e:
+            self._logger.error(f"아이템 전처리 중 오류 발생: {str(e)}")
+            return None
+            
+    def preprocess_user_data(self, user_profile: UserProfile, vectorizer: TfidfVectorizer = None) -> Optional[np.ndarray]:
+        try:
+            # 모든 장르와 키워드를 하나의 리스트로 결합
+            all_preferences = (
+                user_profile['movie_genre_preference'] +
+                user_profile['performance_genre_preference'] +
+                user_profile['exhibition_genre_preference'] +
+                user_profile['like_words']
+            )
+                
+            # 리스트를 문자열로 변환
+            text_to_vectorize = ' '.join(all_preferences)
+                
+            # vectorizer로 변환
+            vector = vectorizer.transform([text_to_vectorize])
+                
+            # 희소 행렬을 밀집 배열로 변환
+            vector = vector.toarray().squeeze()
+                
+            self._logger.info(f"생성된 사용자 벡터 shape: {vector.shape}")
+            self._logger.info(f"벡터 통계 - 평균: {vector.mean():.4f}, 표준편차: {vector.std():.4f}")
+                
+            # 원본 데이터 복사 후 vector 항목 추가
+            processed_user_data = user_profile.copy()
+            processed_user_data['vector'] = vector
+                
+            return processed_user_data
 
         except Exception as e:
-            logging.error(f"Error preprocessing items: {str(e)}")
-            return None
+            self._logger.error(f"사용자 데이터 전처리 중 오류 발생: {str(e)}")
+            raise
 
-    def _preprocess_item(self, item: Dict) -> str:
-        """개별 아이템 데이터 전처리"""
+    def _preprocess_text(self, item: Dict) -> str:
+        """아이템 텍스트 전처리"""
         try:
             text_parts = []
-
+            
+            # 제목 처리 (가중치를 높이기 위해 2번 추가)
+            if 'title' in item and item['title']:
+                text_parts.extend([item['title'].lower()] * 2)
+                
+            # 설명 처리
+            if 'description' in item and item['description']:
+                text_parts.append(item['description'].lower())
+                
             # 장르 처리
-            if 'genre_nm' in item and item['genre_nm']:
-                text_parts.append(item['genre_nm'].lower())
-
-            # 감독/작가 처리
-            if 'director' in item and item['director']:
-                text_parts.append(item['director'].lower())
-
+            if 'genre' in item and item['genre']:
+                genres = item['genre'].split(',') if isinstance(item['genre'], str) else item['genre']
+                text_parts.extend([genre.lower().strip() for genre in genres if genre.strip()])
+                
             # 배우/참여자 처리
             if 'actors' in item and item['actors']:
                 actors = item['actors'].split(',') if isinstance(item['actors'], str) else item['actors']
@@ -134,28 +143,47 @@ class DataPreprocessor:
             return ' '.join(text_parts)
 
         except Exception as e:
-            logging.error(f"Error preprocessing item: {str(e)}")
+            self._logger.error(f"텍스트 전처리 중 오류 발생: {str(e)}")
             return ''
 
-    def preprocess_user_profile(self, user_profile: UserProfile, content_type: ContentType, vectorizer: TfidfVectorizer):
-        """사용자 프로필 전처리 및 벡터화"""
-        try:
-            # 사용자 키워드 및 장르 결합
-            user_terms = []
+    def _get_content_type(self, item_data: Dict[str, Any]) -> ContentType:
+            """
+            아이템 데이터에서 컨텐츠 타입을 추출하고 검증
             
-            # 키워드 처리
-            user_terms.extend([keyword.lower() for keyword in user_profile.keywords])
-            
-            # 해당 컨텐츠 타입의 장르 선호도 처리
-            if content_type in user_profile.genre_preferences:
-                for genre in user_profile.genre_preferences[content_type]:
-                    user_terms.extend([genre.lower()])
+            Args:
+                item_data: 아이템 데이터 딕셔너리
+                
+            Returns:
+                ContentType: 검증된 컨텐츠 타입
+                
+            Raises:
+                ContentTypeError: 컨텐츠 타입이 없거나 유효하지 않은 경우
+            """
+            try:
+                if 'type' not in item_data:
+                    raise ContentTypeError(
+                        "컨텐츠 타입이 지정되지 않았습니다. "
+                        f"유효한 타입: {ContentType.get_valid_types()}"
+                    )
 
-            user_text = ' '.join(user_terms)
-            user_vector = vectorizer.transform([user_text])
+                type_str = item_data['type']
+                if not isinstance(type_str, str):
+                    raise ContentTypeError(
+                        f"컨텐츠 타입은 문자열이어야 합니다. "
+                        f"입력된 타입: {type(type_str)}"
+                    )
 
-            return user_vector
+                if type_str not in ContentType.get_valid_types():
+                    raise ContentTypeError(
+                        f"유효하지 않은 컨텐츠 타입입니다: {type_str}. "
+                        f"유효한 타입: {ContentType.get_valid_types()}"
+                    )
 
-        except Exception as e:
-            logging.error(f"Error preprocessing user profile: {str(e)}")
-            return None
+                return ContentType(type_str)
+
+            except ContentTypeError as e:
+                self._logger.error(f"컨텐츠 타입 오류: {str(e)}")
+                raise
+            except Exception as e:
+                self._logger.error(f"예상치 못한 오류 발생: {str(e)}")
+                raise ContentTypeError(f"컨텐츠 타입 처리 중 오류 발생: {str(e)}")
