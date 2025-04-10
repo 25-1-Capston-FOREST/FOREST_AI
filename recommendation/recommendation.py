@@ -417,7 +417,7 @@ class RecommendationAlgorithm:
 
                 # 상위 추천 결과 로깅
                 self._logger.info("=== 상위 추천 결과 ===")
-                for idx, item in enumerate(recommendations[:10], 1):
+                for idx, item in enumerate(recommendations[:50], 1):
                     self._logger.info(
                         f"{idx}. {item['title']} "
                         f"(유사도: {item['similarity']:.4f}, "
@@ -425,7 +425,9 @@ class RecommendationAlgorithm:
                     )
 
                 # ID만 추출하여 리스트로 반환
-                recommendation_list = [item['activity_id'] for item in recommendations[:30]]
+                recommendations.sort(key=lambda x: x['similarity'], reverse=False)
+                recommendation_list = [item['activity_id'] for item in recommendations[:50]]
+
                 return recommendation_list
 
             except Exception as e:
