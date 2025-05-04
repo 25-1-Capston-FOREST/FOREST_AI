@@ -1,0 +1,69 @@
+{
+    "chatbot_flow": [
+      {
+        "id": "start",
+        "message": "안녕하세요! 😊 당신에게 꼭 맞는 여가 콘텐츠를 추천해드릴게요.\n\n영화, 공연, 전시 중에서 어떤 활동을 좋아하시나요?\n복수로 말씀하셔도 좋고, 고민 중이시라면 그 이유를 알려주셔도 괜찮아요!",
+        "type": "choice",
+        "choices": ["영화", "공연", "전시", "잘 모르겠어요"],
+        "next": {
+          "영화": "movie_genre",
+          "공연": "performance_genre",
+          "전시": "exhibition_genre",
+          "잘 모르겠어요": "help_decide_content"
+        }
+      },
+      {
+        "id": "help_decide_content",
+        "message": "괜찮아요! 😊\n그럼 이런 활동 중에서 어떤 분위기나 느낌이 더 끌리세요?",
+        "type": "choice",
+        "choices": ["스토리에 몰입할 수 있는", "예술적인 감성을 느낄 수 있는", "차분하고 힐링되는", "활기차고 신나는", "새로운 걸 배울 수 있는"],
+        "next": "content_suggestion_by_mood"
+      },
+      {
+        "id": "movie_genre",
+        "message": "영화를 좋아하시는군요!\n어떤 장르의 영화를 즐겨보시나요?",
+        "type": "multi_choice",
+        "choices": ["로맨스", "드라마", "코미디", "스릴러", "액션", "SF", "판타지", "애니메이션", "다큐멘터리", "예술영화"],
+        "next": "mood_question"
+      },
+      {
+        "id": "performance_genre",
+        "message": "공연은 어떤 스타일이 좋으세요?",
+        "type": "multi_choice",
+        "choices": ["뮤지컬", "연극", "콘서트", "클래식", "무용", "실험극"],
+        "next": "mood_question"
+      },
+      {
+        "id": "exhibition_genre",
+        "message": "전시는 어떤 종류를 좋아하시나요?",
+        "type": "multi_choice",
+        "choices": ["현대미술", "사진", "일러스트", "공예", "역사", "과학", "미디어아트"],
+        "next": "mood_question"
+      },
+      {
+        "id": "mood_question",
+        "message": "이번엔 분위기를 여쭤볼게요 😊\n어떤 느낌의 콘텐츠를 보면 기분이 좋아지시나요?",
+        "type": "multi_choice",
+        "choices": ["감성적이고 여운이 남는", "유쾌하고 웃긴", "긴장감 있고 몰입도 높은", "예술적이고 독창적인", "조용하고 힐링되는", "메시지가 깊은", "활기차고 에너지 넘치는"],
+        "next": "style_question"
+      },
+      {
+        "id": "style_question",
+        "message": "조금 더 구체적으로 여쭤볼게요!\n이런 요소 중 어떤 게 콘텐츠를 고를 때 중요하신가요?",
+        "type": "multi_choice",
+        "choices": ["스토리의 반전이나 구성", "음악이나 사운드", "영상미나 무대 디자인", "실화 기반 이야기", "사회적 메시지", "예술가의 개성이 드러나는 스타일", "캐릭터 중심의 이야기"],
+        "next": "summary_check"
+      },
+      {
+        "id": "summary_check",
+        "message": "지금까지 말씀해주신 걸 정리해볼게요:\n- 콘텐츠 유형: {{content_type}}\n- 장르: {{genre}}\n- 분위기: {{mood}}\n- 스타일: {{style}}\n\n혹시 추가하고 싶은 내용이나 수정할 부분이 있을까요? 😄",
+        "type": "text",
+        "next": "end"
+      },
+      {
+        "id": "end",
+        "message": "감사합니다! 말씀해주신 취향에 맞는 콘텐츠를 추천해드릴게요 🎁",
+        "type": "end"
+      }
+    ]
+  }
