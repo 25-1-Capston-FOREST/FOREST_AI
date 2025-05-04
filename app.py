@@ -11,6 +11,7 @@ import os
 from recommendation.recommendation import RecommendationAlgorithm
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
+from chatbot.chatbot import ChatbotSession
 
 # .env 파일 로드
 load_dotenv()
@@ -31,6 +32,26 @@ item_queries = ItemQueries()
 recommender = RecommendationAlgorithm()
 logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
 
+# 챗봇
+# 임시: 메모리 세션 (실제 서비스는 Redis 등 외부 세션 활용 권장)
+chatbot_sessions = {}
+
+@app.route('/chatbot/message', methods=['POST'])
+def chatbot_message():
+    user_id = request.json.get('user_id', 'test_user')
+    user_input = request.json.get('message', '')
+    # 리스트형 응답(Multi choice)도 처리 가능
+    if isinstance(user_input, str) and user_input.startswith("[") and user_input.endswith("]"):
+        import ast
+        user_input = ast.literal_eval(user_input)
+    if user_id not in chatbot_sessions:
+        chatbot_sessions[user_id] = ChatbotSession()
+    chatbot = chatbot_sessions[user_id]
+    result = chatbot.process_input(user_input)
+    return jsonify(result)
+
+
+# 추천 리스트
 @app.route("/recommendations", methods=["POST"])
 def create_recommendations():
     try:
