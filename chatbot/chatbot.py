@@ -5,7 +5,8 @@ from prompting import FEWSHOT_EXAMPLES
 class Chatbot:
     def __init__(self, openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL):
         self.model = model
-        openai.api_key = openai_api_key
+        # 최신 버전에서 클라이언트 인스턴스를 활용합니다.
+        self.client = openai.OpenAI(api_key=openai_api_key)
 
         self.few_shot_examples = FEWSHOT_EXAMPLES
         self.initial_questions = [
@@ -46,7 +47,7 @@ class Chatbot:
             return self.initial_questions[len(dialogue_history) % len(self.initial_questions)]
 
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "너는 맞춤 질문을 하는 영화/공연/전시 취향 챗봇이야."},
@@ -55,7 +56,7 @@ class Chatbot:
                 max_tokens=64,
                 temperature=0.8
             )
-            question = response['choices'][0]['message']['content'].strip()
+            question = response.choices[0].message.content.strip()
             if not question.endswith('?'):
                 question += "?"
             return question

@@ -11,7 +11,8 @@ class KeywordExtractor:
                  model=OPENAI_MODEL, 
                  stopwords=STOPWORDS, 
                  preference_examples=PREFERENCE_KEYWORD_EXAMPLES):
-        openai.api_key = openai_api_key
+        # 최신 openai 패키지 방식
+        self.client = openai.OpenAI(api_key=openai_api_key)
         self.model = model
         self.okt = Okt()
         self.stopwords = stopwords
@@ -48,7 +49,7 @@ class KeywordExtractor:
             "키워드:"
         )
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "사용자 문화·취향 키워드만 엄선하는 한국어 전문가입니다."},
@@ -57,7 +58,7 @@ class KeywordExtractor:
                 max_tokens=24,
                 temperature=0
             )
-            answer = response['choices'][0]['message']['content']
+            answer = response.choices[0].message.content
             keywords = [k.strip() for k in answer.replace('키워드:', '').replace('\n', '').split(',') if len(k.strip()) > 1]
             return keywords
         except Exception as e:
@@ -69,7 +70,7 @@ class KeywordExtractor:
             f'"{text}" 이 문장에서 "{kw}"는 긍정적인 취향 키워드입니까? 맞으면 "예", 아니면 "아니요"만 답하세요.'
         )
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": "긍정 취향 키워드만 판별하는 한국어 전문가입니다."},
@@ -78,7 +79,7 @@ class KeywordExtractor:
                 max_tokens=3,
                 temperature=0
             )
-            result = response['choices'][0]['message']['content'].strip().replace('.', '')
+            result = response.choices[0].message.content.strip().replace('.', '')
             return '예' in result
         except Exception as e:
             print(f"[GPT 감성분석 오류] {kw}: {e}")
