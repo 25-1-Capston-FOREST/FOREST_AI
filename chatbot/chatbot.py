@@ -1,41 +1,64 @@
 import openai
-import os
+from config import OPENAI_API_KEY, OPENAI_MODEL
+from prompting import FEWSHOT_EXAMPLES
 
-# 환경변수에 OPENAI_API_KEY를 반드시 등록!
-openai.api_key = os.getenv("OPENAI_API_KEY")
+class Chatbot:
+    def __init__(self, openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL):
+        self.model = model
+        openai.api_key = openai_api_key
 
-# prompting.py에서 불러오거나 직접 선언
-try:
-    from prompting import get_few_shot
-    FEW_SHOT = get_few_shot()
-except ImportError:
-    FEW_SHOT = [
-        {
-            "role": "system",
-            "content": (
-                "너는 영화, 공연, 전시 분야의 문화 추천을 도와주는 친절한 AI 챗봇이야. "
-                "항상 존댓말과 공손한 어투를 사용하며, 사용자의 취향, 선호 장르, 최근 감상 경험 등 데이터를 자연스럽게 수집하길 원해. "
-                "구체적으로, 영화·공연·전시와 관련된 취향, 감상 방식, 특별히 좋아하는 요소, 최근 감상한 작품 등에 대해 질문해. 감상한 작품에서 어떤 요소가 좋았는지나 기억에 남았는지 질문해."
-                "친절하게 공감하며, 대답하기 어려울 때는 편하게 건너뛰라고 안내해도 좋아."
+        self.few_shot_examples = FEWSHOT_EXAMPLES
+        self.initial_questions = [
+            "최근에 감상한 영화나 공연, 전시가 있으신가요?",
+            "어떤 장르를 선호하시나요?",
+            "특별히 기억에 남는 작품이 있으신가요?"
+        ]
+
+    def generate_next_question(self, dialogue_history, keywords):
+        # 대화내역을 질문-답변 쌍 형태로 구성
+        context = ""
+        for user_input, bot_question in dialogue_history:
+            if bot_question:
+                context += f"챗봇: {bot_question}\n"
+            if user_input:
+                context += f"사용자: {user_input}\n"
+
+        # Few-shot 예시 추가
+        few_shot_str = ""
+        for ex in self.few_shot_examples:
+            few_shot_str += f"챗봇: {ex['user']}\n사용자: {ex['assistant']}\n"
+
+        keyword_str = ", ".join(keywords) if keywords else "없음"
+
+        prompt = (
+            f"너는 영화/공연/전시 취향, 선호작품, 장르, 관람 방식 등을 심층적으로 알아보는 AI 챗봇이야.\n"
+            f"아래는 예시 질문 및 답변이야. (참고만 하세요)\n"
+            f"{few_shot_str}\n"
+            f"아래는 지금까지의 실제 대화내역이야.\n{context}\n"
+            f"■ 지금까지 파악된 키워드: {keyword_str}\n"
+            "기존보다 더 구체적이고 자연스러운 맞춤형 질문을 한 가지만 생성해.\n"
+            "- 사용자가 취향을 더 잘 드러낼 수 있도록 이끌어내는 질문일수록 좋아.\n"
+            "- 인사말/키워드 언급/불필요한 서론 없이 ‘질문만’ 출력해."
+        )
+
+        # 첫 질문 처리
+        if len(dialogue_history) <= 1 or (not keywords and len(dialogue_history) <= 2):
+            return self.initial_questions[len(dialogue_history) % len(self.initial_questions)]
+
+        try:
+            response = openai.ChatCompletion.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "너는 맞춤 질문을 하는 영화/공연/전시 취향 챗봇이야."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=64,
+                temperature=0.8
             )
-        },
-        # 아래 생략(앞서 안내 예시 참고)
-    ]
-
-def generate_chatbot_response(user_history):
-    # FEW_SHOT + 유저 입력 합친 messages 생성
-    messages = FEW_SHOT.copy()
-    for ua in user_history:
-        messages.append({"role": "user", "content": ua["user"]})
-        if "assistant" in ua and ua["assistant"]:
-            messages.append({"role": "assistant", "content": ua["assistant"]})
-
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=100,
-        temperature=0.7,
-        n=1,
-        stop=None,
-    )
-    return response.choices[0].message.content.strip()
+            question = response['choices'][0]['message']['content'].strip()
+            if not question.endswith('?'):
+                question += "?"
+            return question
+        except Exception as e:
+            print("[GPT ERROR]", e)
+            return "최근 본 문화 예술 작품 중 기억에 남는 게 있으신가요?"

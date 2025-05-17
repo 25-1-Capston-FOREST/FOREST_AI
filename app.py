@@ -31,25 +31,63 @@ user_queries = UserQueries()
 item_queries = ItemQueries()
 recommender = RecommendationAlgorithm()
 logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
+chatbot = Chatbot(openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL)
+logging.info("Chatbot 인스턴스 생성 완료")
+extractor = KeywordExtractor(openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL)
+logging.info("KeywordExtractor 인스턴스 생성 완료")
+user_sessions = {}
+
 
 # 챗봇
-# 임시: 메모리 세션 (실제 서비스는 Redis 등 외부 세션 활용 권장)
-chatbot_sessions = {}
+@app.route('/chatbot/answer', methods=['POST'])
+def chatbot_answer():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        message = data.get('message')
+        if not user_id or not message:
+            return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
-@app.route('/chatbot/message', methods=['POST'])
-def chatbot_message():
-    user_id = request.json.get('user_id', 'test_user')
-    user_input = request.json.get('message', '')
-    # 리스트형 응답(Multi choice)도 처리 가능
-    if isinstance(user_input, str) and user_input.startswith("[") and user_input.endswith("]"):
-        import ast
-        user_input = ast.literal_eval(user_input)
-    if user_id not in chatbot_sessions:
-        chatbot_sessions[user_id] = ChatbotSession()
-    chatbot = chatbot_sessions[user_id]
-    result = chatbot.process_input(user_input)
-    return jsonify(result)
+        # 대화 세션 관리(실제는 DB 등 추천)
+        dialogue = user_sessions.setdefault(user_id, [])
+        # (user_input, bot_question)
+        last_bot_question = dialogue[-1][1] if dialogue else ""
+        dialogue.append((message, ""))
 
+        # 취향 키워드 추출 (내부 용도)
+        keywords = extractor.extract(message)
+
+        # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
+        next_question = chatbot.generate_next_question(dialogue, keywords)
+        # dialogue 최신 발화 갱신
+        dialogue[-1] = (message, next_question)
+
+        # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
+        return jsonify({'status': 'success', 'reply': next_question}), 200
+
+    except Exception as e:
+        print("[ERROR]", str(e))
+        return jsonify({'status': 'error', 'message': '챗봇 처리 중 오류가 발생했습니다.'}), 500
+
+@app.route('/chatbot/save', methods=['POST'])
+def chatbot_save():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        question_id = data.get('question_id')
+        message = data.get('message')
+        end_reason = data.get('end_reason')
+        if not user_id or not question_id or not message or not end_reason:
+            return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
+
+        # 종료 시 대화 세션 정리 (실은 DB 등에 저장 확장 가능)
+        if user_id in user_sessions:
+            del user_sessions[user_id]
+        return jsonify({'status': 'success', 'message': '마지막 응답이 성공적으로 저장되었습니다.'}), 200
+
+    except Exception as e:
+        print("[ERROR]", str(e))
+        return jsonify({'status': 'error', 'message': '챗봇 처리 중 오류가 발생했습니다.'}), 500
 
 # 추천 리스트
 @app.route("/recommendations", methods=["POST"])

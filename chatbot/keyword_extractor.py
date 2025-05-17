@@ -1,72 +1,85 @@
-import openai
-import os
-from konlpy.tag import Okt
 import re
-
-openai.api_key = os.getenv('OPENAI_API_KEY')
+from konlpy.tag import Okt
+import openai
+from config import OPENAI_API_KEY, OPENAI_MODEL
+from stopwords import STOPWORDS
+from prompt_examples import PREFERENCE_KEYWORD_EXAMPLES
 
 class KeywordExtractor:
-    def __init__(self):
+    def __init__(self, 
+                 openai_api_key=OPENAI_API_KEY, 
+                 model=OPENAI_MODEL, 
+                 stopwords=STOPWORDS, 
+                 preference_examples=PREFERENCE_KEYWORD_EXAMPLES):
+        openai.api_key = openai_api_key
+        self.model = model
         self.okt = Okt()
-        self.stopwords = {
-            '은', '는', '이', '가', '를', '을', '에', '의', '도', '와',
-            '과', '로', '으로', '부터', '까지', '에서', '입니다', '해요', '합니다'
-        }
+        self.stopwords = stopwords
+        self.preference_examples = preference_examples
 
     def extract(self, text: str):
-        # 1. NLP 명사 추출
-        text_clean = re.sub(r'[^\w\s]', ' ', text)
-        words = self.okt.nouns(text_clean)
-        base_keywords = [w for w in words if w not in self.stopwords and len(w) > 1]
+        """(a)-(b)-(c)-(d) 통합 프로세스"""
+        # (a) 명사 추출+불용어 제거
+        text_clean = self._clean_text(text)
+        base_keywords = [w for w in self.okt.nouns(text_clean) 
+                         if w not in self.stopwords and len(w) > 1]
 
-        # 2. GPT 키워드 보조 추출
-        prompt = f"""다음 문장에서 문화취향이나 활동을 대표할 수 있는 키워드만 3~5개 콤마로 나열해 주세요:
-문장: "{text}"
-"""
-        try:
-            gpt_response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "system", "content": "당신은 문화취향 키워드 추출기입니다."},
-                          {"role": "user", "content": prompt}],
-                max_tokens=30, temperature=0)
-            gpt_keywords = [k.strip() for k in gpt_response['choices'][0]['message']['content'].split(',') if len(k.strip()) > 1]
-        except Exception:
-            gpt_keywords = []
+        # (b) GPT 기반 "의미중심" 키워드 보조 추출
+        gpt_keywords = self._extract_keywords_gpt(text)
+        
+        # (c) 통합, 중복 제거
+        candidates = list(set(base_keywords + gpt_keywords))
 
-        # 3. 키워드 후보 병합
-        candidate_keywords = list(set(base_keywords + gpt_keywords))
+        # (d) 감성 분석 통한 긍정 키워드만 추림
+        result = [kw for kw in candidates if self._is_positive(kw, text)]
 
-        # 4. 각 키워드별로 입력표현과 텍스트 내 감성분석 → 긍정인 것만
-        positive_keywords = []
-        for kw in candidate_keywords:
-            sentiment = self.sentiment_of_phrase_in_context(kw, text)
-            if sentiment == "긍정":
-                positive_keywords.append(kw)
-        return positive_keywords
+        return result
 
-    def sentiment_of_phrase_in_context(self, phrase: str, context: str):
-        """
-        phrase가 context(전체 문장)에서 어떤 감성(긍정/부정/중립)인지 GPT에게 판단시킵니다.
-        """
-        prompt = f"""다음 문장에서 '{phrase}'에 대한 화자의 감정(긍정/부정/중립)을 심플하게 한 단어(긍정, 부정, 중립)로만 답해주세요.
-문장: "{context}"
-"""
+    def _clean_text(self, text):
+        return re.sub(r"[^\uAC00-\uD7A3a-zA-Z0-9\s]", " ", text).strip()
+
+    def _extract_keywords_gpt(self, text):
+        ex_keywords = ', '.join(self.preference_examples)
+        prompt = (
+            f"아래 문장에서 영화/공연/전시의 취향, 분위기, 장르 등 중요한 대표 키워드 3~5개만 콤마로 알려줘.\n"
+            f"예시: {ex_keywords}\n"
+            f'문장: "{text}"\n'
+            "불필요 명사·대명사·인칭 등은 제외, 반드시 취향/분위기/장르 중심\n"
+            "키워드:"
+        )
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "system", "content": "감성 분석가입니다."},
-                          {"role": "user", "content": prompt}],
-                max_tokens=3, temperature=0
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "사용자 문화·취향 키워드만 엄선하는 한국어 전문가입니다."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=24,
+                temperature=0
             )
-            answer = response['choices'][0]['message']['content'].strip().replace('.', '')
-            # 혹시 예외적 출력 보정
-            if '긍정' in answer:
-                return '긍정'
-            elif '부정' in answer:
-                return '부정'
-            elif '중립' in answer:
-                return '중립'
-            else:
-                return '중립'
-        except Exception:
-            return '중립'
+            answer = response['choices'][0]['message']['content']
+            keywords = [k.strip() for k in answer.replace('키워드:', '').replace('\n', '').split(',') if len(k.strip()) > 1]
+            return keywords
+        except Exception as e:
+            print(f"[GPT 키워드 추출 오류] {e}")
+            return []
+
+    def _is_positive(self, kw, text):
+        prompt = (
+            f'"{text}" 이 문장에서 "{kw}"는 긍정적인 취향 키워드입니까? 맞으면 "예", 아니면 "아니요"만 답하세요.'
+        )
+        try:
+            response = openai.ChatCompletion.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "긍정 취향 키워드만 판별하는 한국어 전문가입니다."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=3,
+                temperature=0
+            )
+            result = response['choices'][0]['message']['content'].strip().replace('.', '')
+            return '예' in result
+        except Exception as e:
+            print(f"[GPT 감성분석 오류] {kw}: {e}")
+            return False
