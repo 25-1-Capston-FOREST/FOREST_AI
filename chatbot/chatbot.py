@@ -1,5 +1,5 @@
 import openai
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from config.settings import OPENAI_API_KEY, OPENAI_MODEL
 from prompting import FEWSHOT_EXAMPLES
 
 class Chatbot:

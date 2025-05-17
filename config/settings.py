@@ -16,3 +16,6 @@ RECOMMENDATION_SETTINGS = {
     'min_ratings': 10,
     'similarity_threshold': 0.5
 }
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
