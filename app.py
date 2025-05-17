@@ -11,7 +11,7 @@ import os
 from recommendation.recommendation import RecommendationAlgorithm
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
-from chatbot.chatbot import ChatbotSession
+from chatbot.chatbot import Chatbot
 
 # .env 파일 로드
 load_dotenv()

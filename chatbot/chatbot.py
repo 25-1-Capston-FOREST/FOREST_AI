@@ -1,6 +1,6 @@
 import openai
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
-from prompting import FEWSHOT_EXAMPLES
+from .prompting import FEWSHOT_EXAMPLES
 
 class Chatbot:
     def __init__(self, openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL):
