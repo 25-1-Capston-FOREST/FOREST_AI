@@ -12,9 +12,12 @@ from recommendation.recommendation import RecommendationAlgorithm
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
 from chatbot.chatbot import Chatbot
+from keyword_extractor import KeywordExtractor
+from config.settings import OPENAI_API_KEY, OPENAI_MODEL
 
 # .env 파일 로드
 load_dotenv()
+
 
 # 로깅 설정
 logging.basicConfig(
