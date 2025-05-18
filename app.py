@@ -96,20 +96,23 @@ def chatbot_answer():
 
 @app.route('/chatbot/save', methods=['POST'])
 def chatbot_save():
+    logging.info("/chatbot/save 엔드포인트 호출됨")
     try:
         data = request.get_json()
         user_id = data.get('user_id')
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id가 필요합니다.'}), 400
         
+        logging.info("대화 내역 불러오기")
         dialogue = user_sessions.get(user_id, [])
         full_text = " ".join(dialogue)
 
-
+        logging.info("키워드 추출")
         # # 키워드 추출
         # keywords = []
         # if full_text.strip():
         #     keywords = keyword_extractor.extract(full_text)
+            logging.info("키워드 저장")
         #     if keywords:
 
 
