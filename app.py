@@ -63,6 +63,11 @@ def chatbot_answer():
             logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id} message: {message}')
             return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
+        # question_id가 1이면 세션 초기화
+        if question_id == "1":
+            logging.info(f"user_id: {user_id} - 대화 세션 초기화")
+            user_sessions[user_id] = []
+
         # 대화 세션 관리(실제는 DB 등 추천)
         logging.info("챗봇 대화 세션 저장")
         dialogue = user_sessions.setdefault(user_id, [])
@@ -95,11 +100,11 @@ def chatbot_save():
         full_text = " ".join(dialogue)
 
 
-        # 키워드 추출
-        keywords = []
-        if full_text.strip():
-            keywords = keyword_extractor.extract(full_text)
-            if keywords:
+        # # 키워드 추출
+        # keywords = []
+        # if full_text.strip():
+        #     keywords = keyword_extractor.extract(full_text)
+        #     if keywords:
 
 
         # DB 저장 (preference)
