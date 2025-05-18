@@ -54,7 +54,7 @@ def chatbot_answer():
                 logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id}')
                 return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
-        if(question_id == 1):
+        if(question_id == "1"):
             initial_question = chatbot.initial_questions()
             logging.info(f"처리중인 user_id: {user_id} - 첫 질문: {initial_question}")
             return jsonify({'status': 'success', 'reply': initial_question}), 200
