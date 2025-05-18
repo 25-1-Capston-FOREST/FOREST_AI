@@ -21,7 +21,7 @@ class Chatbot:
         ranNum = random.randint(0, 2)
         return self.initial_questions[ranNum]
 
-    def generate_next_question(self, dialogue_history, keywords):
+    def generate_next_question(self, dialogue_history):
         # 대화내역을 질문-답변 쌍 형태로 구성
         context = ""
         for user_input, bot_question in dialogue_history:
@@ -35,14 +35,14 @@ class Chatbot:
         for ex in self.few_shot_examples:
             few_shot_str += f"챗봇: {ex['user']}\n사용자: {ex['assistant']}\n"
 
-        keyword_str = ", ".join(keywords) if keywords else "없음"
+        # keyword_str = ", ".join(keywords) if keywords else "없음"
 
         prompt = (
             f"너는 영화/공연/전시 취향, 선호작품, 장르, 관람 방식 등을 심층적으로 알아보는 AI 챗봇이야.\n"
             f"아래는 예시 질문 및 답변이야. (참고만 하세요)\n"
             f"{few_shot_str}\n"
             f"아래는 지금까지의 실제 대화내역이야.\n{context}\n"
-            f"■ 지금까지 파악된 키워드: {keyword_str}\n"
+            #f"■ 지금까지 파악된 키워드: {keyword_str}\n"
             "기존보다 더 구체적이고 자연스러운 맞춤형 질문을 한 가지만 생성해.\n"
             "- 사용자가 취향을 더 잘 드러낼 수 있도록 이끌어내는 질문일수록 좋아.\n"
             "- 인사말/키워드 언급/불필요한 서론 없이 ‘질문만’ 출력해."
