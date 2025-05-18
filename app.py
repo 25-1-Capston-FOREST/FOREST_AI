@@ -71,18 +71,21 @@ def chatbot_answer():
         # 대화 세션 관리(실제는 DB 등 추천)
         logging.info("챗봇 대화 세션 저장")
         dialogue = user_sessions.setdefault(user_id, [])
-        dialogue.append(message)
+        last_bot_question = dialogue[-1][1] if dialogue else ""
+        dialogue.append((message, ""))
 
         # 취향 키워드 추출 (질문 생성 용도)
         logging.info("챗봇 키워드 추출")
-        keywords = []
-        #keywords = extractor.extract(message)
+        keywords = extractor.extract(message)
 
         # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
         logging.info("챗봇 후속 질문 생성")
         logging.info("dialogue 구조 확인: %s", repr(dialogue))
         logging.info("keywords: %s", repr(keywords))
-        next_question = chatbot.generate_next_question(dialogue)
+        next_question = chatbot.generate_next_question(dialogue,keywords)
+
+        # dialogue 최신 발화 갱신
+        dialogue[-1] = (message, next_question)
 
         # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
         return jsonify({'status': 'success', 'reply': next_question}), 200
