@@ -59,27 +59,27 @@ def chatbot_answer():
         #     logging.info(f"처리중인 user_id: {user_id} - 첫 질문: {initial_question}")
         #     return jsonify({'status': 'success', 'reply': initial_question}), 200
         # else:
-            if not user_id or not question_id or not message:
-                logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id} message: {message}')
-                return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
+        if not user_id or not question_id or not message:
+            logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id} message: {message}')
+            return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
-            # 대화 세션 관리(실제는 DB 등 추천)
-            logging.info("챗봇 대화 세션 저장")
-            dialogue = user_sessions.setdefault(user_id, [])
-            dialogue.append(message)
+        # 대화 세션 관리(실제는 DB 등 추천)
+        logging.info("챗봇 대화 세션 저장")
+        dialogue = user_sessions.setdefault(user_id, [])
+        dialogue.append(message)
 
-            # 취향 키워드 추출 (질문 생성 용도)
-            logging.info("챗봇 키워드 추출")
-            keywords = extractor.extract(message)
+        # 취향 키워드 추출 (질문 생성 용도)
+        logging.info("챗봇 키워드 추출")
+        keywords = extractor.extract(message)
 
-            # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
-            logging.info("챗봇 후속 질문 생성")
-            next_question = chatbot.generate_next_question(dialogue, keywords)
-            # dialogue 최신 발화 갱신
-            dialogue[-1] = (message, next_question)
+        # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
+        logging.info("챗봇 후속 질문 생성")
+        next_question = chatbot.generate_next_question(dialogue, keywords)
+        # dialogue 최신 발화 갱신
+        dialogue[-1] = (message, next_question)
 
-            # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
-            return jsonify({'status': 'success', 'reply': next_question}), 200
+        # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
+        return jsonify({'status': 'success', 'reply': next_question}), 200
 
     except Exception as e:
         logging.error(f"챗봇 처리 중 오류: {str(e)}")
