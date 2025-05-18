@@ -71,6 +71,7 @@ def chatbot_answer():
         # 대화 세션 관리(실제는 DB 등 추천)
         logging.info("챗봇 대화 세션 저장")
         dialogue = user_sessions.setdefault(user_id, [])
+        # dialogue.append(message)
         last_bot_question = dialogue[-1][1] if dialogue else ""
         dialogue.append((message, ""))
 
@@ -85,8 +86,10 @@ def chatbot_answer():
         next_question = chatbot.generate_next_question(dialogue,keywords)
 
         # dialogue 최신 발화 갱신
+        logging.info("발화 갱신")
         dialogue[-1] = (message, next_question)
 
+        logging.info("질문 반환")
         # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
         return jsonify({'status': 'success', 'reply': next_question}), 200
 
@@ -103,25 +106,27 @@ def chatbot_save():
         if not user_id:
             return jsonify({'status': 'error', 'message': 'user_id가 필요합니다.'}), 400
         
-        logging.info("대화 내역 불러오기")
+        logging.info(f"{user_id} 대화 내역 불러오기")
         dialogue = user_sessions.get(user_id, [])
-        full_text = " ".join(dialogue)
+
+        if not dialogue:
+            return jsonify({'status': 'error', 'message': '대화 기록 없음'}), 404
+
+        # 메시지 합치기
+        logging.info("메시지 통합")
+        all_text = " ".join(dialogue)
 
         logging.info("키워드 추출")
-        # # 키워드 추출
-        # keywords = []
-        # if full_text.strip():
-        #     keywords = keyword_extractor.extract(full_text)
-            logging.info("키워드 저장")
-        #     if keywords:
-
-
+        keywords = extractor.extract(all_text)
+        print("[전체 발화 기준 키워드 추출 결과]",keywords)
+    
+        logging.info("키워드 저장")
         # DB 저장 (preference)
 
 
-        # 대화 세션 초기화
-        if user_id in user_sessions:
-            del user_sessions[user_id]
+        # # 대화 세션 초기화
+        # if user_id in user_sessions:
+        #     del user_sessions[user_id]
 
         return jsonify({'status': 'success', 'message': '성공적으로 저장되었습니다.'}), 200
 
