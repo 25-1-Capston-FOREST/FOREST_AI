@@ -23,8 +23,11 @@ class ItemQueries(BaseDatabase):
             FROM DB_FOREST.MOVIE
         """
         try:
+            self._logger.info(f"영화 데이터 가져오기")
+
             with self.db as conn:
                 cursor = conn.cursor()
+                self._logger.info(f"쿼리 실행")
                 cursor.execute(query)
                 
                 # 컬럼명 가져오기

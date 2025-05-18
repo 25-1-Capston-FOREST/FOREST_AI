@@ -55,11 +55,12 @@ class RecommendationAlgorithm:
             Tuple[List[Dict], TfidfVectorizer]: 전처리된 모든 아이템 리스트와 vectorizer
         """
         try:
+            self._logger.info(f"아이템 데이터 가져오기")
             # 1. ItemQueries를 통해 모든 데이터 가져오기
             movies = self._item_queries.get_movies_data(ContentType.MOVIE)
             performances = self._item_queries.get_performances_data()
             exhibitions = self._item_queries.get_exhibitions_data()
-
+            
             # 데이터 검증
             item_count = len(movies)
             self._logger.info(f"[DB 조회 성공] 총 {item_count}개 아이템 조회됨")
@@ -257,6 +258,7 @@ class RecommendationAlgorithm:
         사용자에게 컨텐츠 타입별 추천 아이템을 반환하는 함수
         """
         try:
+            self._logger.info(f"사용자 ID {user_id} 추천 시작")
             # 테스트용 사용자 데이터
             user_profile = {
                 'user_id': user_id,
@@ -284,6 +286,7 @@ class RecommendationAlgorithm:
 
             }
 
+            self._logger.info(f"아이템 데이터 준비")
             # 아이템 데이터 준비
             # 모든 컨텐츠 타입의 아이템을 하나의 리스트로 통합
             all_items,vectorizer = self.prepare_item_data()
@@ -294,6 +297,7 @@ class RecommendationAlgorithm:
                 return []
 
             #processed_user_data = self.preprocessor.preprocess_user_data(user_profile,vectorizer)
+            self._logger.info(f"아이템 데이터 전처리")
             processed_user_data = self.prepare_user_data(user_id, vectorizer)
 
 

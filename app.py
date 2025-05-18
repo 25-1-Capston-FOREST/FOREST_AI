@@ -12,7 +12,7 @@ from recommendation.recommendation import RecommendationAlgorithm
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
 from chatbot.chatbot import Chatbot
-from keyword_extractor import KeywordExtractor
+from chatbot.keyword_extractor import KeywordExtractor
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
 
 # .env 파일 로드
@@ -45,22 +45,28 @@ user_sessions = {}
 @app.route('/chatbot/answer', methods=['POST'])
 def chatbot_answer():
     try:
+        logging.info("/chatbot/answer 엔드포인트 호출됨")
         data = request.get_json()
         user_id = data.get('user_id')
+        question_id = data.get('question_id')
         message = data.get('message')
         if not user_id or not message:
+            logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id}, message: {message}')
             return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
         # 대화 세션 관리(실제는 DB 등 추천)
+        logging.info("챗봇 대화 세션 저장")
         dialogue = user_sessions.setdefault(user_id, [])
         # (user_input, bot_question)
         last_bot_question = dialogue[-1][1] if dialogue else ""
         dialogue.append((message, ""))
 
         # 취향 키워드 추출 (내부 용도)
+        logging.info("챗봇 키워드 추출")
         keywords = extractor.extract(message)
 
         # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
+        logging.info("챗봇 후속 질문 생성")
         next_question = chatbot.generate_next_question(dialogue, keywords)
         # dialogue 최신 발화 갱신
         dialogue[-1] = (message, next_question)
@@ -69,7 +75,7 @@ def chatbot_answer():
         return jsonify({'status': 'success', 'reply': next_question}), 200
 
     except Exception as e:
-        print("[ERROR]", str(e))
+        logging.error(f"챗봇 처리 중 오류: {str(e)}")
         return jsonify({'status': 'error', 'message': '챗봇 처리 중 오류가 발생했습니다.'}), 500
 
 @app.route('/chatbot/save', methods=['POST'])
@@ -83,7 +89,7 @@ def chatbot_save():
         if not user_id or not question_id or not message or not end_reason:
             return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
-        # 종료 시 대화 세션 정리 (실은 DB 등에 저장 확장 가능)
+        # 종료 시 대화 세션 정리 
         if user_id in user_sessions:
             del user_sessions[user_id]
         return jsonify({'status': 'success', 'message': '마지막 응답이 성공적으로 저장되었습니다.'}), 200
@@ -136,34 +142,6 @@ def create_recommendations():
                 "status": "error",
                 "message": f"추천 생성 중 오류 발생: {str(e)}"
             }),500
-
-        # # 테스트 용 코드
-        # if user_id == "1":
-        #     logging.debug("테스트 사용자 ID 감지됨")
-        #     try:
-        #         logging.info("추천 알고리즘 실행 시작")
-        #         recommendations = [13, 1234 ,125, 654]
-        #         #recommendations = recommender.api_test_recommendation(user_id)
-        #         logging.info(f"추천 결과 생성됨: {recommendations}")
-        #         return jsonify({
-        #             "status": "success",
-        #             "recommendations": recommendations,
-        #             "message": "추천 상품 목록을 성공적으로 가져왔습니다."
-        #         })
-        #     except Exception as e:
-        #         logging.error(f"추천 생성 중 오류 발생: {str(e)}")
-        #         return jsonify({
-        #             "status": "error",
-        #             "message": f"추천 생성 중 오류 발생: {str(e)}"
-        #         }),500
-        #     #message = "추천 상품 목록을 성공적으로 가져왔습니다."
-        # else:
-        #     recommendations = []
-        #     return jsonify({
-        #         "status": "success",
-        #         "recommendations": recommendations,
-        #         "message": "추천 상품 목록이 없습니다."
-        #     })
     
     except Exception as e:
         # 서버 내부 오류 발생 시 500 에러 처리

@@ -2,8 +2,8 @@ import re
 from konlpy.tag import Okt
 import openai
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
-from stopwords import STOPWORDS
-from prompt_examples import PREFERENCE_KEYWORD_EXAMPLES
+from .stopwords import STOPWORDS
+from .prompt_examples import PREFERENCE_KEYWORD_EXAMPLES
 
 class KeywordExtractor:
     def __init__(self, 

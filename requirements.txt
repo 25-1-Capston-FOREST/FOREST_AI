@@ -8,3 +8,4 @@ scikit-learn==1.6.1
 scipy==1.15.2
 openai>=0.27.0
 textblob>=0.15.3
+konply
