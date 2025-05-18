@@ -11,6 +11,7 @@ import os
 from recommendation.recommendation import RecommendationAlgorithm
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
+from database.save_preference import PreferenceQueries
 from chatbot.chatbot import Chatbot
 from chatbot.keyword_extractor import KeywordExtractor
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
@@ -160,6 +161,7 @@ def create_recommendations():
             logging.info("추천 알고리즘 실행 시작")
             recommendation_list = recommender.get_recommendations(user_id)
             logging.info(f"추천 결과 생성됨: {recommendation_list}")
+
             
             if len(recommendation_list) > 0:
                 return jsonify({

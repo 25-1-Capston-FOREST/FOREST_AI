@@ -47,76 +47,128 @@ class RecommendationAlgorithm:
             level=logging.INFO
         )
 
+
+    def safe_join(val, sep=' '):
+        if isinstance(val, (list, tuple)):
+            return sep.join(map(str, val))
+        elif isinstance(val, str):
+            return val
+        elif val is None:
+            return ''
+        else:
+            return str(val)
+
     def prepare_item_data(self):
         """
-        영화, 공연, 전시 데이터를 모두 가져오고 전처리하는 메서드
-        
-        Returns:
-            Tuple[List[Dict], TfidfVectorizer]: 전처리된 모든 아이템 리스트와 vectorizer
+        영화, 공연, 전시 데이터를 모두 가져오고 
+        하나의 vectorizer로 학습하여 통합 벡터 공간에 올리는 메서드
         """
         try:
             self._logger.info(f"아이템 데이터 가져오기")
-            # 1. ItemQueries를 통해 모든 데이터 가져오기
+
+            # 1. 전체 데이터 수집
             movies = self._item_queries.get_movies_data(ContentType.MOVIE)
             performances = self._item_queries.get_performances_data()
             exhibitions = self._item_queries.get_exhibitions_data()
-            
-            # 데이터 검증
-            item_count = len(movies)
-            self._logger.info(f"[DB 조회 성공] 총 {item_count}개 아이템 조회됨")
-            
-            # 2. ItemPreprocessor를 통해 각각 전처리
-            preprocessed_movies = self.preprocessor.preprocess_items(movies)
-            preprocessed_performances = self.preprocessor.preprocess_items(performances)
-            preprocessed_exhibitions = self.preprocessor.preprocess_items(exhibitions)
 
-            # 전처리된 데이터 저장
-            self.item_data[ContentType.MOVIE] = {
-                'items': movies,
-                'vector': preprocessed_movies['vector'],
-                'vectorizer': preprocessed_movies['vectorizer'],
-                'last_updated': datetime.now()
-            }
+            all_items = movies + performances + exhibitions
             
-            self.item_data[ContentType.PERFORMANCE] = {
-                'items': performances,
-                'vector': preprocessed_performances['vector'],
-                'vectorizer': preprocessed_performances['vectorizer'],
-                'last_updated': datetime.now()
-            }
-            
-            self.item_data[ContentType.EXHIBITION] = {
-                'items': exhibitions,
-                'vector': preprocessed_exhibitions['vector'],
-                'vectorizer': preprocessed_exhibitions['vectorizer'],
-                'last_updated': datetime.now()
-            }
+            self._logger.info(f"[DB 조회 성공] 총 {len(all_items)}개 아이템 조회됨")
 
-            self._logger.info(f"전체 아이템 준비 완료 (영화: {len(movies)}개, 공연: {len(performances)}개, 전시: {len(exhibitions)}개)")
-            
-            # 모든 아이템을 하나의 리스트로 통합
-            all_items = []
-            for content_type, data in self.item_data.items():
-                items = data['items']
-                vector = data['vector']
-                for item, vector in zip(items, vector):
-                    all_items.append({
-                        'title': item['title'],
-                        'content_type': content_type.value,
-                        'vector': vector,
-                        **item  # 기존 아이템의 다른 속성들도 포함
-                    }) 
+            # 2. 모든 아이템에 대해 텍스트(키워드+장르 등) 필드 통합 전처리 (safe_join 적용)
+            for item in all_items:
+                doc_parts = [
+                    item.get('title', ''),
+                    safe_join(item.get('keywords', '')),
+                    item.get('genre_nm', '')
+                ]
+                item['doc'] = ' '.join(filter(None, doc_parts))  # 빈 값 제외하고 합침
 
-            # vectorizer는 어떤 컨텐츠 타입의 것을 사용해도 동일하므로, 
-            # 예를 들어 영화 데이터의 vectorizer를 반환
-            return all_items, self.item_data[ContentType.MOVIE]['vectorizer']
-        
-        except DatabaseError as db_err:
-            self._logger.error(f"데이터베이스 오류 발생: {str(db_err)}")
-            return False
+            # 3. 통합 TF-IDF vectorizer 생성 및 벡터 변환
+            corpus = [item['doc'] for item in all_items]
+            vectorizer = TfidfVectorizer()
+            vectors = vectorizer.fit_transform(corpus)
+
+            # 4. 벡터 할당
+            for item, vector in zip(all_items, vectors):
+                item['vector'] = vector
+
+            self._logger.info(f"전체 아이템 준비 및 벡터화 완료 (총 {len(all_items)}개)")
+            return all_items, vectorizer
+
         except Exception as e:
             self._logger.error(f"아이템 데이터 준비 중 오류 발생: {str(e)}")
             raise
+    # def prepare_item_data(self):
+    #     """
+    #     영화, 공연, 전시 데이터를 모두 가져오고 전처리하는 메서드
+        
+    #     Returns:
+    #         Tuple[List[Dict], TfidfVectorizer]: 전처리된 모든 아이템 리스트와 vectorizer
+    #     """
+    #     try:
+    #         self._logger.info(f"아이템 데이터 가져오기")
+    #         # 1. ItemQueries를 통해 모든 데이터 가져오기
+    #         movies = self._item_queries.get_movies_data(ContentType.MOVIE)
+    #         performances = self._item_queries.get_performances_data()
+    #         exhibitions = self._item_queries.get_exhibitions_data()
+
+    #         # 데이터 검증
+    #         item_count = len(movies) + len(performances) + len(exhibitions)
+    #         self._logger.info(f"[DB 조회 성공] 총 {item_count}개 아이템 조회됨")
+            
+    #         # 2. ItemPreprocessor를 통해 각각 전처리
+    #         preprocessed_movies = self.preprocessor.preprocess_items(movies)
+    #         preprocessed_performances = self.preprocessor.preprocess_items(performances)
+    #         preprocessed_exhibitions = self.preprocessor.preprocess_items(exhibitions)
+
+    #         # 전처리된 데이터 저장
+    #         self.item_data[ContentType.MOVIE] = {
+    #             'items': movies,
+    #             'vector': preprocessed_movies['vector'],
+    #             'vectorizer': preprocessed_movies['vectorizer'],
+    #             'last_updated': datetime.now()
+    #         }
+            
+    #         self.item_data[ContentType.PERFORMANCE] = {
+    #             'items': performances,
+    #             'vector': preprocessed_performances['vector'],
+    #             'vectorizer': preprocessed_performances['vectorizer'],
+    #             'last_updated': datetime.now()
+    #         }
+            
+    #         self.item_data[ContentType.EXHIBITION] = {
+    #             'items': exhibitions,
+    #             'vector': preprocessed_exhibitions['vector'],
+    #             'vectorizer': preprocessed_exhibitions['vectorizer'],
+    #             'last_updated': datetime.now()
+    #         }
+
+    #         self._logger.info(f"전체 아이템 준비 완료 (영화: {len(movies)}개, 공연: {len(performances)}개, 전시: {len(exhibitions)}개)")
+            
+    #         # 모든 아이템을 하나의 리스트로 통합
+    #         all_items = []
+    #         for content_type, data in self.item_data.items():
+    #             items = data['items']
+    #             vector = data['vector']
+    #             for item, vector in zip(items, vector):
+    #                 all_items.append({
+    #                     'title': item['title'],
+    #                     'content_type': content_type.value,
+    #                     'vector': vector,
+    #                     **item  # 기존 아이템의 다른 속성들도 포함
+    #                 }) 
+
+    #         # vectorizer는 어떤 컨텐츠 타입의 것을 사용해도 동일하므로, 
+    #         # 예를 들어 영화 데이터의 vectorizer를 반환
+    #         return all_items, self.item_data[ContentType.MOVIE]['vectorizer']
+        
+    #     except DatabaseError as db_err:
+    #         self._logger.error(f"데이터베이스 오류 발생: {str(db_err)}")
+    #         return False
+    #     except Exception as e:
+    #         self._logger.error(f"아이템 데이터 준비 중 오류 발생: {str(e)}")
+    #         raise
 
     def prepare_user_data(self, user_id: int,vectorizer) -> bool:
         """
@@ -124,6 +176,7 @@ class RecommendationAlgorithm:
         """
         try:
             # 1. 데이터베이스에서 사용자 데이터 가져오기
+            self._logger.info(f"사용자 ID {user_id}의 데이터 DB에서 가져오기")
             raw_user_data = self._user_queries.get_user_preferences(user_id)
             if not raw_user_data:
                 self._logger.warning(f"사용자 ID {user_id}에 대한 데이터를 찾을 수 없습니다.")
@@ -259,32 +312,6 @@ class RecommendationAlgorithm:
         """
         try:
             self._logger.info(f"사용자 ID {user_id} 추천 시작")
-            # 테스트용 사용자 데이터
-            user_profile = {
-                'user_id': user_id,
-                'movie_preference': 7,
-                'performance_preference': 5,
-                'exhibition_preference': 3,
-                'movie_genre_preference': [
-                    '액션', '드라마', '로맨스', '코미디', '스릴러'
-                ],
-                'performance_genre_preference': [
-                    '뮤지컬', '연극', '콘서트', '클래식'
-                ],
-                'exhibition_genre_preference': [
-                    '미술', '사진', '설치미술', '현대미술'
-                ],
-                'like_words': [
-                    '감동', '재미', '스릴', '로맨틱', '예술', '생존'
-                ],
-                'vector':[
-                    '액션', '드라마', '로맨스', '코미디', '스릴러',
-                    '뮤지컬', '연극', '콘서트', '클래식',
-                    '미술', '사진', '설치미술', '현대미술',
-                    '감동적인', '재미있는', '스릴있는', '로맨틱한', '예술적인'
-                ]
-
-            }
 
             self._logger.info(f"아이템 데이터 준비")
             # 아이템 데이터 준비
@@ -297,7 +324,7 @@ class RecommendationAlgorithm:
                 return []
 
             #processed_user_data = self.preprocessor.preprocess_user_data(user_profile,vectorizer)
-            self._logger.info(f"아이템 데이터 전처리")
+            self._logger.info(f"유저 데이터 전처리")
             processed_user_data = self.prepare_user_data(user_id, vectorizer)
 
 
@@ -309,18 +336,8 @@ class RecommendationAlgorithm:
                 'vector': processed_user_data[user_id]['vector'],
                 'last_updated': datetime.now()
             }
+            print(self.user_data)
             self._logger.info(f"사용자 ID {user_id}의 데이터 준비 완료1")
-            
-            # for content_type in ContentType:
-            #     items = self.item_data.get(content_type, [])
-            #     for item in items:
-            #         all_items.append({
-            #             'id': item['id'],
-            #             'title': item['title'],
-            #             'content_type': content_type.value,
-            #             'vector': item['vector']  # 전처리된 아이템 벡터
-            #         })
-            #         all_item_vectors.append(item['vector'])
 
 
             self._logger.info(f"\n=== 전체 아이템 데이터 로드 완료 (총 {len(all_items)}개) ===")
@@ -332,48 +349,6 @@ class RecommendationAlgorithm:
             
             for content_type, count in type_counts.items():
                 self._logger.info(f"{content_type}: {count}개 아이템")
-
-            # try:
-                # # NumPy 배열로 변환
-                # user_vector = self.user_data[user_id]['vector']  # 전처리된 사용자 벡터
-                # # item_vector = np.array([item['vector'] for item in all_items])
-                
-                # # 모든 아이템의 벡터를 하나의 행렬로 구성 (n_items x 310)
-                # item_vectors = item['vector']
-                
-                # # 벡터 shape 로깅
-                # self._logger.debug(f"User vector shape: {user_vector.shape}")
-                # self._logger.debug(f"Combined item vectors shape: {item_vectors.shape}")
-                
-                # # 차원 확인
-                # if user_vector.shape[0] != item_vectors.shape[1]:
-                #     raise ValueError(
-                #         f"벡터 차원 불일치: user_vector({user_vector.shape}) vs "
-                #         f"item_vectors({item_vectors.shape})"
-                #     )
-
-                # # 코사인 유사도 계산
-                # similarities = self.calculate_similarity(user_vector, item_vectors)
-                
-                # # 유사도 점수로 정렬된 아이템 리스트 생성
-                # scored_items = []
-                # for idx, score in enumerate(similarities):
-                #     item_copy = all_items[idx].copy()
-                #     item_copy['similarity_score'] = float(score)
-                #     scored_items.append(item_copy)
-
-                # # 점수 기준 내림차순 정렬
-                # sorted_items = sorted(scored_items, key=lambda x: x['similarity_score'], reverse=True)
-
-                # # 로그 출력 (상위 10개 아이템)
-                # self._logger.info("\n=== 추천 결과 (상위 10개) ===")
-                # for idx, item in enumerate(sorted_items[:10], 1):
-                #     self._logger.info(
-                #         f"{idx}. [{item['content_type']}] {item['title']} "
-                #         f"(유사도: {item['similarity_score']:.3f})"
-                #     )
-
-                # return sorted_items
 
             try:
                 self._logger.info(f"전체 아이템 수: {len(all_items)}")
@@ -416,22 +391,42 @@ class RecommendationAlgorithm:
                         self._logger.error(f"아이템 {idx} 처리 중 오류: {str(e)}")
                         continue
 
+                # # 유사도 기준 내림차순 정렬
+                # recommendations.sort(key=lambda x: x['similarity'], reverse=True)
+        
+                # # 상위 추천 결과 로깅
+                # self._logger.info("=== 상위 추천 결과 ===")
+                # for idx, item in enumerate(recommendations[:50], 1):
+                #     self._logger.info(
+                #         f"{idx}. {item['title']} "
+                #         f"{item['activity_id']} "
+                #         f"(유사도: {item['similarity']:.4f}, "
+                #         f"장르: {item['genre_nm']})"
+                #     )
+
+                # # ID만 추출하여 리스트로 반환
+                # recommendations.sort(key=lambda x: x['similarity'], reverse=True)
+                # recommendation_list = [item['activity_id'] for item in recommendations[:15]]
+                # return recommendation_list
+
+                # 유사도가 0보다 큰 항목만 필터링
+                filtered_recommendations = [item for item in recommendations if item['similarity'] > 0]
+
                 # 유사도 기준 내림차순 정렬
-                recommendations.sort(key=lambda x: x['similarity'], reverse=True)
+                filtered_recommendations.sort(key=lambda x: x['similarity'], reverse=True)
 
                 # 상위 추천 결과 로깅
                 self._logger.info("=== 상위 추천 결과 ===")
-                for idx, item in enumerate(recommendations[:50], 1):
+                for idx, item in enumerate(filtered_recommendations[:50], 1):
                     self._logger.info(
                         f"{idx}. {item['title']} "
+                        f"{item['activity_id']} "
                         f"(유사도: {item['similarity']:.4f}, "
                         f"장르: {item['genre_nm']})"
                     )
 
                 # ID만 추출하여 리스트로 반환
-                recommendations.sort(key=lambda x: x['similarity'], reverse=False)
-                recommendation_list = [item['activity_id'] for item in recommendations[:50]]
-
+                recommendation_list = [item['activity_id'] for item in filtered_recommendations[:15]]
                 return recommendation_list
 
             except Exception as e:

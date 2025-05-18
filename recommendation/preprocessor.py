@@ -31,7 +31,8 @@ class DataPreprocessor:
         self._vectorizer = TfidfVectorizer(
             max_features=1000,  # 차원 수 제한
             lowercase=True,     # 소문자 변환
-            ngram_range=(1, 2)  # 단일 단어와 두 단어 조합 모두 사용
+            ngram_range=(1, 2),  # 단일 단어와 두 단어 조합 모두 사용
+            token_pattern=r"(?u)\b\w+\b"
         )
         self._is_fitted = False  # vectorizer의 학습 여부 체크
         
@@ -68,7 +69,8 @@ class DataPreprocessor:
             vector = self._vectorizer.transform(texts)
             self._logger.info(f"생성된  벡터 shape: {vector.shape}")
             self._logger.info(f"벡터 통계 - 평균: {vector.mean():.4f}")
-                
+            self._logger.info(f"생성된  벡터 수: {len(self._vectorizer.vocabulary_)}")
+            self._logger.info(f"생성된  벡터: {sorted(self._vectorizer.vocabulary_.keys())}")
             
             return {
                 'items': processed_items,
@@ -89,10 +91,14 @@ class DataPreprocessor:
                 user_profile['exhibition_genre_preference'] +
                 user_profile['like_words']
             )
-                
+            
+
             # 리스트를 문자열로 변환
             text_to_vectorize = ' '.join(all_preferences)
-                
+            
+            self._logger.info(f"user_profile: {user_profile}")
+            self._logger.info(f"all_preferences: {all_preferences}")
+            self._logger.info(f"text_to_vectorize: '{text_to_vectorize}'")
             # vectorizer로 변환
             vector = vectorizer.transform([text_to_vectorize])
                 
@@ -104,8 +110,7 @@ class DataPreprocessor:
                 
             # 원본 데이터 복사 후 vector 항목 추가
             processed_user_data = user_profile.copy()
-            processed_user_data['vector'] = vector
-                
+            processed_user_data['vector'] = vector  
             return processed_user_data
 
         except Exception as e:
@@ -117,10 +122,10 @@ class DataPreprocessor:
         try:
             text_parts = []
             
-            # 제목 처리 (가중치를 높이기 위해 2번 추가)
+            # 제목 처리 (가중치 부여 예시)
             if 'title' in item and item['title']:
                 text_parts.extend([item['title'].lower()] * 2)
-                
+
             # 설명 처리
             if 'description' in item and item['description']:
                 text_parts.append(item['description'].lower())
