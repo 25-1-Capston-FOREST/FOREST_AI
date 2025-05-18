@@ -1,6 +1,7 @@
 import openai
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
 from .prompting import FEWSHOT_EXAMPLES
+import random
 
 class Chatbot:
     def __init__(self, openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL):
@@ -14,6 +15,11 @@ class Chatbot:
             "어떤 장르를 선호하시나요?",
             "특별히 기억에 남는 작품이 있으신가요?"
         ]
+
+    def initial_questions(self):
+        # 첫 질문 처리
+        ranNum = random.randint(0, 2)
+        return self.initial_questions[ranNum]
 
     def generate_next_question(self, dialogue_history, keywords):
         # 대화내역을 질문-답변 쌍 형태로 구성
@@ -41,10 +47,6 @@ class Chatbot:
             "- 사용자가 취향을 더 잘 드러낼 수 있도록 이끌어내는 질문일수록 좋아.\n"
             "- 인사말/키워드 언급/불필요한 서론 없이 ‘질문만’ 출력해."
         )
-
-        # 첫 질문 처리
-        if len(dialogue_history) <= 1 or (not keywords and len(dialogue_history) <= 2):
-            return self.initial_questions[len(dialogue_history) % len(self.initial_questions)]
 
         try:
             response = self.client.chat.completions.create(
