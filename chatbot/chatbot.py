@@ -16,7 +16,7 @@ class Chatbot:
             "특별히 기억에 남는 작품이 있으신가요?"
         ]
 
-    def initial_questions(self):
+    def generate_initial_question(self):
         # 첫 질문 처리
         ranNum = random.randint(0, 2)
         return self.initial_questions[ranNum]

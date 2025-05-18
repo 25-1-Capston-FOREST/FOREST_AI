@@ -55,7 +55,7 @@ def chatbot_answer():
                 return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
         if(question_id == "1"):
-            initial_question = chatbot.initial_questions()
+            initial_question = chatbot.generate_initial_question()
             logging.info(f"처리중인 user_id: {user_id} - 첫 질문: {initial_question}")
             return jsonify({'status': 'success', 'reply': initial_question}), 200
         else:
