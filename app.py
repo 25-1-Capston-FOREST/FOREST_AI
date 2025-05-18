@@ -32,6 +32,7 @@ CORS(app)
 # 인스턴스 생성&초기화
 user_queries = UserQueries()
 item_queries = ItemQueries()
+save_preferecne = PreferenceQueries()
 recommender = RecommendationAlgorithm()
 logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
 chatbot = Chatbot(openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL)
@@ -108,13 +109,14 @@ def chatbot_save():
         
         logging.info(f"{user_id} 대화 내역 불러오기")
         dialogue = user_sessions.get(user_id, [])
-
+        logging.info("dialogue 구조 확인: %s", repr(dialogue))
         if not dialogue:
             return jsonify({'status': 'error', 'message': '대화 기록 없음'}), 404
 
         # 메시지 합치기
         logging.info("메시지 통합")
-        all_text = " ".join(dialogue)
+        logging.info("dialogue 구조 확인: %s", repr(dialogue))
+        all_text = " ".join(ut[0] for ut in dialogue)
 
         logging.info("키워드 추출")
         keywords = extractor.extract(all_text)
@@ -122,7 +124,7 @@ def chatbot_save():
     
         logging.info("키워드 저장")
         # DB 저장 (preference)
-
+        save_preferecne.save_like_words(user_id, keywords)
 
         # # 대화 세션 초기화
         # if user_id in user_sessions:

@@ -3,40 +3,58 @@ import logging
 from typing import List
 from mysql.connector import Error as DatabaseError
 
-class PreferenceSaver(BaseDatabase):
+class PreferenceQueries(BaseDatabase):
     def __init__(self):
-        super().__init__()
+        super().__init__()  # BaseDatabase의 __init__ 호출
         self._logger = logging.getLogger(__name__)
 
-    def save_user_keywords(self, user_id: int, keywords: List[str]) -> int:
+    def save_like_words(self, user_id: str, new_keywords: List[str]):
         """
-        사용자 선호 키워드를 user_keywords 테이블에 저장합니다.
-        :param user_id: 사용자 ID (int)
-        :param keywords: 키워드 리스트 (str 리스트)
-        :return: 저장된 키워드 개수 (int)
+        user_id에 맞춰 like_words에 키워드를 추가해서 업데이트.
+        기존 값이 있으면 합치고, 없으면 새로 삽입(CREATE).
         """
-        if not user_id or not keywords:
-            self._logger.warning("user_id나 keywords가 비어있습니다.")
-            return 0
-        
-        query = """
-            INSERT INTO DB_FOREST.user_keywords (user_id, keyword)
-            VALUES (%s, %s)
-        """
-        saved_count = 0
+        if not new_keywords:
+            self._logger.info("추가할 키워드가 없습니다.")
+            return
 
         try:
             with self.db as conn:
                 cursor = conn.cursor()
-                for kw in keywords:
-                    try:
-                        cursor.execute(query, (user_id, kw))
-                        saved_count += 1
-                    except DatabaseError as e:
-                        self._logger.error(f"키워드 저장 실패 (user_id={user_id}, keyword={kw}): {str(e)}")
+
+                # 1. 기존 like_words 가져오기
+                select_query = """
+                    SELECT like_words FROM DB_FOREST.PREFERENCE
+                    WHERE user_id = %s
+                """
+                cursor.execute(select_query, (user_id,))
+                row = cursor.fetchone()
+
+                if row:
+                    # 기존 키워드와 새로운 키워드를 합쳐서 중복 제거
+                    existing_keywords = row[0] if row[0] else ""
+                    existing_list = [k.strip() for k in existing_keywords.split(",") if k.strip()]
+                    final_list = list(set(existing_list + new_keywords))
+                    final_like_words = ", ".join(final_list)
+
+                    update_query = """
+                        UPDATE DB_FOREST.PREFERENCE
+                        SET like_words = %s
+                        WHERE user_id = %s
+                    """
+                    cursor.execute(update_query, (final_like_words, user_id))
+                    self._logger.info(f"user_id={user_id}의 like_words가 성공적으로 업데이트되었습니다.")
+                else:
+                    # 기존 정보가 없으므로 새로 INSERT
+                    final_like_words = ", ".join(sorted(set(new_keywords)))
+                    insert_query = """
+                        INSERT INTO DB_FOREST.PREFERENCE (user_id, like_words)
+                        VALUES (%s, %s)
+                    """
+                    cursor.execute(insert_query, (user_id, final_like_words))
+                    self._logger.info(f"user_id={user_id}의 like_words가 신규로 저장되었습니다.")
+
                 conn.commit()
-            self._logger.info(f"{saved_count}개 키워드 저장 완료 (user_id={user_id})")
-            return saved_count
         except DatabaseError as e:
-            self._logger.error(f"키워드 저장 중 DB 오류 발생: {str(e)}")
-            return 0
+            self._logger.error(f"like_words 저장 중 데이터베이스 오류 발생: {str(e)}")
+        except Exception as ex:
+            self._logger.error(f"like_words 저장 중 예외 발생: {str(ex)}")
