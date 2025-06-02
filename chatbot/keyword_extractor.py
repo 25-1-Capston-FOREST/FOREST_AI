@@ -42,11 +42,13 @@ class KeywordExtractor:
     def _extract_keywords_gpt(self, text):
         ex_keywords = ', '.join(self.preference_examples)
         prompt = (
-            f"아래 문장에서 영화/공연/전시의 취향, 분위기, 장르 등 중요한 대표 키워드 3~5개만 콤마로 알려줘.\n"
-            f"예시: {ex_keywords}\n"
-            f'문장: "{text}"\n'
-            "불필요 명사·대명사·인칭 등은 제외, 반드시 취향/분위기/장르 중심\n"
-            "키워드:"
+            "From the following Korean sentence, extract only 3 to 5 important and representative keywords in Korean related to taste, mood, or genre, specifically for movies, performances, or exhibitions. "
+            "Exclude unnecessary nouns, pronouns, and personal names; focus only on tastes/preferences, mood, or genres. "
+            "If there are no suitable keywords in the sentence, do not generate or add any keywords—just leave it blank. "
+            "Provide only the keywords in Korean, separated by commas.\n\n"
+            f"Example keywords: {ex_keywords}\n"
+            f"Sentence: \"{text}\"\n"
+            "Keywords:"
         )
         try:
             response = self.client.chat.completions.create(
@@ -67,7 +69,9 @@ class KeywordExtractor:
 
     def _is_positive(self, kw, text):
         prompt = (
-            f'"{text}" 이 문장에서 "{kw}"는 긍정적인 취향 키워드입니까? 맞으면 "예", 아니면 "아니요"만 답하세요.'
+            f'In the following Korean sentence, is "{kw}" mentioned as a positive preference keyword? '
+            f'If yes, answer only "예". If not, answer only "아니요". Provide your answer only in Korean, without any explanation.\n\n'
+            f'Sentence: "{text}"'
         )
         try:
             response = self.client.chat.completions.create(
