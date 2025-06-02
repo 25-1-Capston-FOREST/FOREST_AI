@@ -67,10 +67,10 @@ class DataPreprocessor:
                 self._is_fitted = True
                 
             vector = self._vectorizer.transform(texts)
-            self._logger.info(f"생성된  벡터 shape: {vector.shape}")
-            self._logger.info(f"벡터 통계 - 평균: {vector.mean():.4f}")
-            self._logger.info(f"생성된  벡터 수: {len(self._vectorizer.vocabulary_)}")
-            self._logger.info(f"생성된  벡터: {sorted(self._vectorizer.vocabulary_.keys())}")
+            # self._logger.info(f"생성된  벡터 shape: {vector.shape}")
+            # self._logger.info(f"벡터 통계 - 평균: {vector.mean():.4f}")
+            # self._logger.info(f"생성된  벡터 수: {len(self._vectorizer.vocabulary_)}")
+            # self._logger.info(f"생성된  벡터: {sorted(self._vectorizer.vocabulary_.keys())}")
             
             return {
                 'items': processed_items,
