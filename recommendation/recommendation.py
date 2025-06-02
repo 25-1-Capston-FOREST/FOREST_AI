@@ -171,21 +171,12 @@ class RecommendationAlgorithm:
             raise
     
     def prepare_item_data(self):
-        """
-        영화, 공연, 전시 데이터를 모두 가져오고 통합해서 벡터라이저를 적용하는 메서드
-
-        Returns:
-            Tuple[List[Dict], TfidfVectorizer]: 전처리된 모든 아이템 리스트와 하나의 vectorizer
-        """
         try:
             self._logger.info("아이템 데이터 가져오기")
-
-            # 1. 모든 데이터 가져오기
             movies = self._item_queries.get_movies_data(ContentType.MOVIE)
             performances = self._item_queries.get_performances_data()
             exhibitions = self._item_queries.get_exhibitions_data()
-
-            # 2. 하나의 리스트로 모두 합치기
+            
             all_items = []
             for item in movies:
                 item['content_type'] = ContentType.MOVIE.value
@@ -196,28 +187,33 @@ class RecommendationAlgorithm:
             for item in exhibitions:
                 item['content_type'] = ContentType.EXHIBITION.value
                 all_items.append(item)
-
+            
             self._logger.info(f"[DB 조회 성공] 총 {len(all_items)}개 아이템 통합")
 
-            # 3. 전체 아이템 전처리 (예: 한 줄 소개+키워드 등 원하는 텍스트 속성 합치기)
-            preprocessed_texts = self.preprocessor.preprocess_items(all_items)
-
-            # 4. 하나의 벡터라이저로 전체 데이터를 fit_transform
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            vectorizer = TfidfVectorizer()  # 인자값 필요하면 조정
-            vector_matrix = vectorizer.fit_transform(preprocessed_texts)  # preprocessed_texts는 텍스트 리스트
-
-            # 5. 벡터 정보 포함하여 all_items 구조화
-            for idx, item in enumerate(all_items):
-                item['vector'] = vector_matrix[idx]
-
+            # 전처리
+            processed = self.preprocessor.preprocess_items(all_items)
+            if not processed:
+                self._logger.error("전처리 결과 없음")
+                raise ValueError("전처리 실패")
+            
+            processed_items = processed['items']
+            vectors = processed['vector']
+            vectorizer = processed['vectorizer']
+            
+            if len(all_items) != len(processed_items):
+                self._logger.error(
+                    f"전처리 결과 길이 불일치: all_items({len(all_items)}) vs processed_items({len(processed_items)})"
+                )
+                raise ValueError("전처리 결과와 아이템 개수가 일치하지 않습니다.")
+            
+            # 기존 all_items 대신 processed_items를 사용하거나,
+            # 기존 동작과 맞추려면 vectors를 all_items의 해당 인덱스에 붙이기
+            for idx, item in enumerate(processed_items):
+                item['vector'] = vectors[idx]
+            
             self._logger.info("전체 아이템 준비 및 벡터라이징 완료")
+            return processed_items, vectorizer
 
-            return all_items, vectorizer
-
-        except DatabaseError as db_err:
-            self._logger.error(f"데이터베이스 오류 발생: {str(db_err)}")
-            return False
         except Exception as e:
             self._logger.error(f"아이템 데이터 준비 중 오류 발생: {str(e)}")
             raise
@@ -394,9 +390,16 @@ class RecommendationAlgorithm:
 
             self._logger.info(f"\n=== 전체 아이템 데이터 로드 완료 (총 {len(all_items)}개) ===")
             
+            self._logger.info(f"all_items 샘플 구조 체크 시작")
+            for idx, item in enumerate(all_items[:10]):
+                self._logger.info(f"샘플 {idx} : {item}")
+
             # 컨텐츠 타입별 아이템 수 로깅
             type_counts = {}
             for item in all_items:
+                if 'content_type' not in item:
+                    self._logger.error(f"content_type이 누락된 아이템 발견: {item.get('activity_id', 'id없음')}")
+                    continue
                 type_counts[item['content_type']] = type_counts.get(item['content_type'], 0) + 1
             
             for content_type, count in type_counts.items():
@@ -428,8 +431,6 @@ class RecommendationAlgorithm:
                             'title': item['title'],
                             'content_type': item['content_type'],
                             'genre_nm': item.get('genre_nm', ''),
-                            'director': item.get('director', ''),
-                            'actors': item.get('actors', ''),
                             'keywords': item.get('keywords', ''),
                             'similarity': float(similarity)
                         }

@@ -39,45 +39,44 @@ class DataPreprocessor:
     def preprocess_items(self, items: List[Dict]) -> Optional[Dict]:
         """
         아이템 데이터 전처리
-        
+
         Args:
             items: 전처리할 아이템 리스트
-            content_type: 컨텐츠 타입 (호환성을 위해 유지)
         """
         try:
             processed_items = []
             texts = []
-            
+
             for item in items:
                 processed_text = self._preprocess_text(item)
                 if processed_text:
                     texts.append(processed_text)
                     processed_items.append({
-                        'id': item.get('activity_id'),
+                        'activity_id': item.get('activity_id'),
+                        'title': item.get('title'),
+                        'genre_nm':item.get('genre'),
+                        'keywords':item.get('keywords'),
                         'text': processed_text,
+                        'content_type': item.get('content_type'),  # 필수!
                         'original': item
                     })
-            
+
             if not processed_items:
                 return None
-                
+
             # vectorizer 학습 및 변환
             if not self._is_fitted:
                 self._vectorizer.fit(texts)
                 self._is_fitted = True
-                
+
             vector = self._vectorizer.transform(texts)
-            # self._logger.info(f"생성된  벡터 shape: {vector.shape}")
-            # self._logger.info(f"벡터 통계 - 평균: {vector.mean():.4f}")
-            # self._logger.info(f"생성된  벡터 수: {len(self._vectorizer.vocabulary_)}")
-            # self._logger.info(f"생성된  벡터: {sorted(self._vectorizer.vocabulary_.keys())}")
             
             return {
                 'items': processed_items,
                 'vector': vector,
                 'vectorizer': self._vectorizer
             }
-            
+
         except Exception as e:
             self._logger.error(f"아이템 전처리 중 오류 발생: {str(e)}")
             return None
