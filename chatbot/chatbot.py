@@ -56,12 +56,12 @@ class Chatbot:
             "Here is the actual conversation so far:\n"
             f"{context}\n\n"
             f"■ Keywords identified so far: {keyword_str}\n\n"
-            "Generate one new, more specific and natural follow-up question designed to elicit the user’s preferences more effectively than previous ones.\n"
-            "- The question should help the user express their tastes or experiences in greater detail.\n"
-            "- Do not include greetings, keyword mentions, or unnecessary introductions—output only the follow-up question.\n"
-            "- Output your question in Korean using a polite (formal) speech style."
+            "Generate only one new, more specific and natural follow-up question to elicit the user's preferences even more effectively. "
+            "The question should help the user express their tastes or experiences in greater detail. "
+            "Do not include greetings, keyword mentions, or unnecessary introductions—output only the follow-up question. "
+            "Output your question in Korean, using polite and formal language (jondaemal) with a complete sentence ending. "
+            "Ensure the sentence ends properly with a complete and natural ending (어미) in Korean."
         )
-
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
