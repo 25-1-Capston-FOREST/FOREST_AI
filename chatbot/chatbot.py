@@ -10,19 +10,10 @@ class Chatbot:
         self.client = openai.OpenAI(api_key=openai_api_key)
 
         self.few_shot_examples = FEWSHOT_EXAMPLES
-        self.initial_questions = [
-            "최근에 감상한 영화나 공연, 전시가 있으신가요?",
-            "어떤 장르를 선호하시나요?",
-            "특별히 기억에 남는 작품이 있으신가요?"
-        ]
-
-    def generate_initial_question(self):
-        # 첫 질문 처리
-        ranNum = random.randint(0, 2)
-        return self.initial_questions[ranNum]
 
     def generate_next_question(self, dialogue_history, keywords):
         # 대화내역을 질문-답변 쌍 형태로 구성
+        messages=[]
         context = ""
         for user_input, bot_question in dialogue_history:
             if bot_question:
@@ -68,6 +59,7 @@ class Chatbot:
             "Never use or output informal (incorrect) questions."
             " In all other cases, always generate a new, more specific follow-up question, in Korean (jondaemal), based on the user's previous answer. The question should help the user express their experiences, preferences, or tastes in more detail."
             "All responses must be output in Korean, using a polite and formal tone with a proper sentence ending."
+            f"Here is the actual conversation so far:\n{context}\n\n"
         )
 
         few_shot_examples = [
