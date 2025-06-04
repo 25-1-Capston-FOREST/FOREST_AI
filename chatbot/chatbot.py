@@ -64,16 +64,17 @@ class Chatbot:
             "- The user is sharing information or answering questions related to movies, performances, or exhibitions."
             "- The AI continues the conversation by asking appropriate follow-up questions based on user responses."
             "Rules:"
-            "1. Always use polite and formal style (proper sentence endings, no informal or incomplete questions)."
-            "2. Never use or output informal (incorrect) questions."
-            "3. If the user greets the chatbot (for example, says \"안녕\", \"안녕하세요\" or other greetings), randomly select and output only one of the following fixed questions:"
-            "- \"요즘 본 영화나 공연, 전시가 있으신가요?\""
-            "- \"어떤 장르를 선호하시나요?\""
-            "4. Generate only one new, more specific and natural follow-up question in Korean to help the user express their tastes, preferences, or experiences in more detail."
-            "5. All responses must be output in Korean, using a polite and formal tone with a proper sentence ending."
+            "Always use polite and formal style (proper sentence endings, no informal or incomplete questions)."
+            "Never use or output informal (incorrect) questions."
+            " In all other cases, always generate a new, more specific follow-up question, in Korean (jondaemal), based on the user's previous answer. The question should help the user express their experiences, preferences, or tastes in more detail."
+            "All responses must be output in Korean, using a polite and formal tone with a proper sentence ending."
         )
 
         few_shot_examples = [
+            # greeting ex
+            {"role": "user", "content": "안녕하세요"},
+            {"role": "assistant", "content": "안녕하세요! 최근 본 영화나 공연, 전시가 있으신가요?"},
+
             # Example 1
             {"role": "user", "content": "최근에는 친구와 함께 <웡카> 영화를 관람하였습니다."},
             {"role": "assistant", "content": "그 영화를 관람하시면서 가장 인상 깊었던 장면이나 느낌이 있으셨나요?"},
