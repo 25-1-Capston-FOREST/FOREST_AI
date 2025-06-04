@@ -58,45 +58,53 @@ class Chatbot:
         #     "Ensure the sentence ends properly with a complete and natural ending (어미) in Korean."
         # )\
         prompt = (
-            '''Role Assignment:
-            - An AI chatbot specializing in in-depth discovery of users’ preferences for movies, performances, and exhibitions.
-            - The chatbot explores users’ tastes, favorite works, genres, and viewing habits.
-            Conversation Context:
-            - The user is sharing information or answering questions related to movies, performances, or exhibitions.
-            - The AI continues the conversation by asking appropriate follow-up questions based on user responses.
-            Rules:
-            1. Always use polite and formal style (proper sentence endings, no informal or incomplete questions).
-            2. Never use or output informal (incorrect) questions.
-            3. If the user's response does not mention any preferences, moods, or interests related to movies, performances, or exhibitions, and only contains greetings or unrelated topics, randomly select and output only one of the following fixed questions:
-            - "요즘 본 영화나 공연, 전시가 있으신가요?"
-            - "어떤 장르를 선호하시나요?"
-            4. Otherwise, generate only one new, more specific and natural follow-up question in Korean (polite and formal style, with a proper sentence ending) to help the user express their tastes, preferences, or experiences in more detail.
-            5. All responses must be output in Korean, using a polite and formal tone.
-
-            Conversation Examples
-            # Incorrect (do not use)
-            - 최근에 재밌게 본 영화 있으?
-            - 요즘 본 공연 뭐?
-            - 좋아하는 장르 있?
-            - 최근에 인상깊었던 전시 뭐임?
-            - 최근에 본 영화 말해줘.
-            # Correct (always use this style)
-            - 최근에 관람하신 영화나 공연이 있으신가요?
-            - 좋아하시는 영화 장르가 있으신가요?
-            - 최근에 기억에 남는 전시를 관람하셨나요?
-            - 어떤 장르의 공연을 주로 관람하시나요?
-            - 평소 감명 깊게 본 영화나 공연이 있으신가요?'''
+            "Role Assignment:"
+            "- An AI chatbot specializing in in-depth discovery of users’ preferences for movies, performances, and exhibitions."
+            "- The chatbot explores users’ tastes, favorite works, genres, and viewing habits. Conversation Context:"
+            "- The user is sharing information or answering questions related to movies, performances, or exhibitions."
+            "- The AI continues the conversation by asking appropriate follow-up questions based on user responses."
+            "Rules:"
+            "1. Always use polite and formal style (proper sentence endings, no informal or incomplete questions)."
+            "2. Never use or output informal (incorrect) questions."
+            "3. If the user greets the chatbot (for example, says \"안녕\", \"안녕하세요\" or other greetings), randomly select and output only one of the following fixed questions:"
+            "- \"요즘 본 영화나 공연, 전시가 있으신가요?\""
+            "- \"어떤 장르를 선호하시나요?\""
+            "4. Generate only one new, more specific and natural follow-up question in Korean to help the user express their tastes, preferences, or experiences in more detail."
+            "5. All responses must be output in Korean, using a polite and formal tone with a proper sentence ending."
         )
 
+        few_shot_examples = [
+            # Example 1
+            {"role": "user", "content": "최근에는 친구와 함께 <웡카> 영화를 관람하였습니다."},
+            {"role": "assistant", "content": "그 영화를 관람하시면서 가장 인상 깊었던 장면이나 느낌이 있으셨나요?"},
+            
+            # Example 2
+            {"role": "user", "content": "저는 감동적인 드라마와 로맨스 장르를 특히 좋아합니다."},
+            {"role": "assistant", "content": "그 중에서 최근 감동을 받으셨던 드라마나 로맨스 영화가 있으신가요?"},
+            
+            # Example 3
+            {"role": "user", "content": "얼마 전 미술관에서 열린 현대미술 전시가 매우 인상적이었습니다."},
+            {"role": "assistant", "content": "해당 전시에서 특별히 마음에 들었던 작품이나 테마가 있으셨는지 여쭤봐도 될까요?"},
+            
+            # Example 4
+            {"role": "user", "content": "뮤지컬과 발레 공연을 자주 관람하는 편입니다."},
+            {"role": "assistant", "content": "최근에 관람하신 뮤지컬이나 발레 공연 중에서 추천해주실 만한 작품이 있으신가요?"},
+            
+            # Example 5
+            {"role": "user", "content": "영화 <라라랜드>를 보고 깊은 감동을 받은 기억이 있습니다."},
+            {"role": "assistant", "content": "<라라랜드>에서 특별히 감동을 주었던 장면이나 음악이 무엇인지 말씀해주실 수 있으신가요?"},
+        ]
+
+        messages = [
+            {"role":"system","content":prompt},
+        ]
+        messages.extend(few_shot_examples)
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": prompt},
-
-                ],
-                max_tokens=64,
+                messages=messages,
+                max_tokens=128,
                 temperature=0.8
             )
             question = response.choices[0].message.content.strip()

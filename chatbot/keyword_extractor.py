@@ -54,8 +54,7 @@ class KeywordExtractor:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "사용자 문화·취향 키워드만 엄선하는 한국어 전문가입니다."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": prompt}
                 ],
                 max_tokens=24,
                 temperature=0
