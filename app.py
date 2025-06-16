@@ -48,6 +48,7 @@ user_sessions = {}
 # 챗봇
 @app.route('/chatbot/answer', methods=['POST'])
 def chatbot_answer():
+    start_time = time.time()
     logging.info("/chatbot/answer 엔드포인트 호출됨")
     try:
         data = request.get_json()
@@ -94,6 +95,8 @@ def chatbot_answer():
         dialogue[-1] = (message, next_question)
 
         logging.info("질문 반환")
+        end_time = time.time()
+        logging.info(f"챗봇 응답 소요 시간: {end_time - start_time:.2f}초")
         # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
         return jsonify({'status': 'success', 'reply': next_question}), 200
 
