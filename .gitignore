@@ -6,4 +6,4 @@ venv/
 .pem
 *.pyc
 myenv/
-.txt
+*.txt
