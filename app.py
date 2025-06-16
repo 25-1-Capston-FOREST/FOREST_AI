@@ -43,7 +43,6 @@ logging.info("Chatbot 인스턴스 생성 완료")
 extractor = KeywordExtractor(openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL)
 logging.info("KeywordExtractor 인스턴스 생성 완료")
 user_sessions = {}
-questions_id = "1"  # 초기 질문 ID
 
 # 챗봇
 @app.route('/chatbot/answer', methods=['POST'])
@@ -61,7 +60,7 @@ def chatbot_answer():
             return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
         # question_id가 1이면 세션 초기화
-        if questions_id == "1":
+        if question_id == "1":
             logging.info(f"user_id: {user_id} - 대화 세션 초기화")
             user_sessions[user_id] = []
 
@@ -89,7 +88,7 @@ def chatbot_answer():
         logging.info("질문 반환")
         end_time = time.time()
         logging.info(f"챗봇 응답 소요 시간: {end_time - start_time:.2f}초")
-        questions_id = str(int(questions_id) + 1)  # 다음 질문 ID로 업데이트
+        question_id = str(int(questions_id) + 1)  # 다음 질문 ID로 업데이트
         # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
         return jsonify({'status': 'success', 'reply': next_question}), 200
 
@@ -129,7 +128,7 @@ def chatbot_save():
         # if user_id in user_sessions:
         #     del user_sessions[user_id]
 
-        questions_id = 1  # 초기화된 상태로 설정
+        question_id = 1  # 초기화된 상태로 설정
         return jsonify({'status': 'success', 'message': '성공적으로 저장되었습니다.'}), 200
 
     except Exception as e:
