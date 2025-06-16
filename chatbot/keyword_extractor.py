@@ -4,6 +4,7 @@ import openai
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
 from .stopwords import STOPWORDS
 from .prompt_examples import PREFERENCE_KEYWORD_EXAMPLES
+import datetime
 
 class KeywordExtractor:
     def __init__(self, 
