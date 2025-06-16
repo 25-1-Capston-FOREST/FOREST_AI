@@ -72,8 +72,8 @@ def chatbot_answer():
         dialogue.append((message, ""))
 
         # 취향 키워드 추출 (질문 생성 용도)
-        logging.info("챗봇 키워드 추출")
-        keywords = extractor.extract(message)
+        #logging.info("챗봇 키워드 추출")
+        #keywords = extractor.extract(message)
 
         # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
         logging.info("챗봇 후속 질문 생성")
@@ -128,7 +128,6 @@ def chatbot_save():
         # if user_id in user_sessions:
         #     del user_sessions[user_id]
 
-        question_id = 1  # 초기화된 상태로 설정
         return jsonify({'status': 'success', 'message': '성공적으로 저장되었습니다.'}), 200
 
     except Exception as e:
