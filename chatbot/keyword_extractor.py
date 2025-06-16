@@ -35,14 +35,15 @@ class KeywordExtractor:
         # (d) 감성 분석 통한 긍정 키워드만 추림
         result = [kw for kw in candidates if self._is_positive(kw, text)]
 
-        # (e) 타임스탬프 생성 및 파일 저장
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"extract_result_{timestamp}.txt"
-        with open(filename, 'w', encoding='utf-8') as f:
+        # (e) 파일에 계속해서 저장(append)하는 방식
+        filename = "extract_result_total.txt"
+
+        with open(filename, 'a', encoding='utf-8') as f:  # 'a' 모드는 append(추가) 모드입니다.
             f.write("입력 텍스트:\n")
             f.write(text + "\n\n")
             f.write("추출 결과 키워드:\n")
             f.write(", ".join(result) + "\n")
+            f.write("="*30 + "\n")  # 구분선 추가(원하시는 경우)
 
         return result
 

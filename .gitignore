@@ -6,3 +6,4 @@ venv/
 .pem
 *.pyc
 myenv/
+.txt
