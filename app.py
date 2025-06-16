@@ -78,8 +78,8 @@ def chatbot_answer():
         # 챗봇의 '후속 질문' 생성 (few-shot + 현재 내역 & 키워드 반영)
         logging.info("챗봇 후속 질문 생성")
         logging.info("dialogue 구조 확인: %s", repr(dialogue))
-        logging.info("keywords: %s", repr(keywords))
-        next_question = chatbot.generate_next_question(dialogue,keywords)
+        #logging.info("keywords: %s", repr(keywords))
+        next_question = chatbot.generate_next_question(dialogue)
 
         # dialogue 최신 발화 갱신
         logging.info("발화 갱신")

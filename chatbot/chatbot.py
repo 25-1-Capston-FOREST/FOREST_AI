@@ -12,7 +12,7 @@ class Chatbot:
 
         self.few_shot_examples = FEWSHOT_EXAMPLES
 
-    def generate_next_question(self, dialogue_history, keywords):
+    def generate_next_question(self, dialogue_history):
         # 대화내역을 질문-답변 쌍 형태로 구성
         messages=[]
         context = ""
@@ -56,7 +56,6 @@ class Chatbot:
             few_shot_str += f"{role_kr}: {ex['content']}\n"
         few_shot_str += "\n"
 
-        keyword_str = ", ".join(keywords) if keywords else "없음"
 
         prompt = (
             "Role Assignment:"
