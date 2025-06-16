@@ -1,8 +1,4 @@
-## Flask 기반의 API 서버 메인 파일
-## 클라이언트 요청 수신 -> 추천 알고리즘 모듈과 연동해 서버로 추천 결과 반환
 
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import logging
 import mysql.connector
 from mysql.connector import Error
@@ -29,9 +25,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-CORS(app)
-
 # 인스턴스 생성&초기화
 user_queries = UserQueries()
 item_queries = ItemQueries()
@@ -45,8 +38,6 @@ logging.info("KeywordExtractor 인스턴스 생성 완료")
 user_sessions = {}
 
 
-# 챗봇
-@app.route('/chatbot/answer', methods=['POST'])
 def chatbot_answer():
     logging.info("/chatbot/answer 엔드포인트 호출됨")
     try:
@@ -54,15 +45,7 @@ def chatbot_answer():
         user_id = data.get('user_id')
         question_id = data.get('question_id')
         message = data.get('message')
-        # if not user_id or not question_id:
-        #         logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id}')
-        #         return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
 
-        # if(question_id == "1"):
-        #     initial_question = chatbot.generate_initial_question()
-        #     logging.info(f"처리중인 user_id: {user_id} - 첫 질문: {initial_question}")
-        #     return jsonify({'status': 'success', 'reply': initial_question}), 200
-        # else:
         if not user_id or not question_id or not message:
             logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id} message: {message}')
             return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
@@ -101,7 +84,7 @@ def chatbot_answer():
         logging.error(f"챗봇 처리 중 오류: {str(e)}")
         return jsonify({'status': 'error', 'message': '챗봇 처리 중 오류가 발생했습니다.'}), 500
 
-@app.route('/chatbot/save', methods=['POST'])
+
 def chatbot_save():
     logging.info("/chatbot/save 엔드포인트 호출됨")
     try:
@@ -139,24 +122,10 @@ def chatbot_save():
         print("[ERROR]", str(e))
         return jsonify({'status': 'error', 'message': '키워드 저장 중 오류가 발생했습니다.'}), 500
 
-# 추천 리스트
-@app.route("/recommendations", methods=["POST"])
-def create_recommendations():
+def create_recommendations(user_id):
     start_time = time.time()
     try:
         logging.info("recommendations 엔드포인트 호출됨")
-        data = request.get_json()   # Request body에서 JSON 데이터 가져오기
-        logging.debug(f"수신된 데이터: {data}")
-        
-        # user_id 검증
-        if not data or 'user_id' not in data:
-            # user_id 없는 경우 400 에러 처리
-            return jsonify({
-                "status": "error",
-                "message": "유효하지 않은 사용자 ID입니다."
-            }), 400
-        
-        user_id = data['user_id']
         logging.info(f"처리 중인 user_id: {user_id}")
 
         # 추천 목록 생성
@@ -166,34 +135,39 @@ def create_recommendations():
             logging.info(f"추천 결과 생성됨: {recommendation_list}")
 
             end_time = time.time()
-            logging.info(f"추천 생성 완료, 소요 시간: {end_time - start_time:.2f}초")
+            total_time = end_time - start_time
+            logging.info(f"추천 생성 완료, 소요 시간: {total_time:.2f}초")
 
             if len(recommendation_list) > 0:
-                return jsonify({
-                    "status": "success",
-                    "recommendations": recommendation_list,
-                    "message": "추천 상품 목록을 성공적으로 가져왔습니다."
-                })
+                return recommendation_list, total_time
             else:
-                return jsonify({
-                    "status": "fail",
-                    "recommendations": [],
-                    "message": "추천 상품 목록이 없습니다."
-                })
+                return 0, 0
 
         except Exception as e:
             logging.error(f"추천 생성 중 오류 발생: {str(e)}")
-            return jsonify({
-                "status": "error",
-                "message": f"추천 생성 중 오류 발생: {str(e)}"
-            }),500
+            return -1,0
     
     except Exception as e:
         # 서버 내부 오류 발생 시 500 에러 처리
-        return jsonify({
-            "status" : "error",
-            "message": "서버 내부 오류가 발생했습니다."
-        }),500
+        return -2,0
     
+def recommendation_test():
+    repeat = 100
+    sum = 0
+    for i in range(repeat):
+        logging.info(f"추천 생성 테스트 {i+1}/{repeat}")
+        # user_id는 실제로는 DB에서 가져와야 함
+        # 여기서는 예시로 1을 사용
+        logging.info(f"추천 생성 테스트 - user_id: 1")
+        user_id = 1
+        # 추천 생성 함수 호출
+        recommendations, total_time = create_recommendations(user_id)
+        sum += total_time
+    
+    print(f"평균 추천 생성 시간: {sum/repeat:.2f}초")
+    logging.info("추천 생성 테스트 완료")
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    
+    recommendation_test()
