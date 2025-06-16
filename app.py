@@ -55,15 +55,7 @@ def chatbot_answer():
         user_id = data.get('user_id')
         question_id = data.get('question_id')
         message = data.get('message')
-        # if not user_id or not question_id:
-        #         logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id}')
-        #         return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
-
-        # if(question_id == "1"):
-        #     initial_question = chatbot.generate_initial_question()
-        #     logging.info(f"처리중인 user_id: {user_id} - 첫 질문: {initial_question}")
-        #     return jsonify({'status': 'success', 'reply': initial_question}), 200
-        # else:
+        logging.info(f"question_id: {question_id}, user_id: {user_id}, message: {message}")
         if not user_id or not question_id or not message:
             logging.warning(f'필수 데이터 누락 - user_id: {user_id}, question_id: {question_id} message: {message}')
             return jsonify({'status': 'error', 'message': '요청 데이터가 올바르지 않습니다.'}), 400
@@ -97,6 +89,7 @@ def chatbot_answer():
         logging.info("질문 반환")
         end_time = time.time()
         logging.info(f"챗봇 응답 소요 시간: {end_time - start_time:.2f}초")
+        question_id = str(int(question_id) + 1)  # 다음 질문 ID로 업데이트
         # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
         return jsonify({'status': 'success', 'reply': next_question}), 200
 
@@ -123,19 +116,20 @@ def chatbot_save():
         logging.info("메시지 통합")
         logging.info("dialogue 구조 확인: %s", repr(dialogue))
         all_text = " ".join(ut[0] for ut in dialogue)
-
+        logging.info(f"모든 발화 통합: {all_text}")
         logging.info("키워드 추출")
         keywords = extractor.extract(all_text)
         print("[전체 발화 기준 키워드 추출 결과]",keywords)
     
         logging.info("키워드 저장")
         # DB 저장 (preference)
-        save_preferecne.save_like_words(user_id, keywords)
+        save_preference.save_like_words(user_id, keywords)
 
         # # 대화 세션 초기화
         # if user_id in user_sessions:
         #     del user_sessions[user_id]
 
+        question_id = 1  # 초기화된 상태로 설정
         return jsonify({'status': 'success', 'message': '성공적으로 저장되었습니다.'}), 200
 
     except Exception as e:

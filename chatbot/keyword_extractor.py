@@ -53,9 +53,10 @@ class KeywordExtractor:
     def _extract_keywords_gpt(self, text):
         ex_keywords = ', '.join(self.preference_examples)
         prompt = (
-            "From the following Korean sentence, extract only 3 to 5 important and representative keywords in Korean related to taste, mood, or genre, specifically for movies, performances, or exhibitions. "
-            "Exclude unnecessary nouns, pronouns, and personal names; focus only on tastes/preferences, mood, or genres. "
-            "If there are no suitable keywords in the sentence, do not generate or add any keywords—just leave it blank. "
+            "From the following Korean sentence, extract only 3 to 5 important and representative keywords in Korean that are related to taste, mood, or genre, specifically concerning movies, performances, or exhibitions. "
+            "Exclude unnecessary nouns, pronouns, and personal names; focus exclusively on tastes/preferences, moods, or genres. "
+            "If there are no relevant keywords in the sentence, do not generate any keywords—leave the result empty (no output). "
+            "If there is a title of a movie, performance, or exhibition, extract it as a single keyword even if it contains spaces. "
             "Provide only the keywords in Korean, separated by commas.\n\n"
             f"Example keywords: {ex_keywords}\n"
             f"Sentence: \"{text}\"\n"
