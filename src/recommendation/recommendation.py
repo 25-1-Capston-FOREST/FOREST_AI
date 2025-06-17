@@ -13,30 +13,27 @@ sys.path.append('/home/ubuntu/FOREST_AI')
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
 from recommendation.preprocessor import DataPreprocessor, ContentType, UserProfile
-#from preprocessor import DataPreprocessor, ContentType, UserProfile
 import scipy.sparse as sp
 from mysql.connector import Error as DatabaseError
 from datetime import datetime
 
+## surprise
+# from surprise import Dataset, Reader, SVD
+# from surprise.model_selection import train_test_split
+# import pandas as pd
+# from database.rating_queries import RatingQueries
+
 
 class RecommendationAlgorithm:
     def __init__(self):
+
         self._item_queries = ItemQueries()
         self._user_queries = UserQueries()
+        # self._rating_queries = RatingQueries()
         self.preprocessor = DataPreprocessor()
+
         self.item_data = {}
         self.user_data = {}
-        
-        # 타입별 목표 비율 설정 (전체 합 1)
-        self._type_ratios = {
-            ContentType.MOVIE: 0.4,
-            ContentType.PERFORMANCE: 0.3,
-            ContentType.EXHIBITION: 0.3
-        }
-        
-        # 최종 점수 계산을 위한 가중치
-        self._similarity_weight = 0.7  # 유사도 점수 가중치
-        self._preference_weight = 0.3  # 선호도 점수 가중치
         
         self._logger = logging.getLogger(__name__)
         self._setup_logger()
@@ -48,57 +45,6 @@ class RecommendationAlgorithm:
         )
 
 
-    # def safe_join(self,val, sep=' '):
-    #     if isinstance(val, (list, tuple)):
-    #         return sep.join(map(str, val))
-    #     elif isinstance(val, str):
-    #         return val
-    #     elif val is None:
-    #         return ''
-    #     else:
-    #         return str(val)
-
-    # def prepare_item_data(self):
-    #     """
-    #     영화, 공연, 전시 데이터를 모두 가져오고 
-    #     하나의 vectorizer로 학습하여 통합 벡터 공간에 올리는 메서드
-    #     """
-    #     try:
-    #         self._logger.info(f"아이템 데이터 가져오기")
-
-    #         # 1. 전체 데이터 수집
-    #         movies = self._item_queries.get_movies_data(ContentType.MOVIE)
-    #         performances = self._item_queries.get_performances_data()
-    #         exhibitions = self._item_queries.get_exhibitions_data()
-
-    #         all_items = movies + performances + exhibitions
-            
-    #         self._logger.info(f"[DB 조회 성공] 총 {len(all_items)}개 아이템 조회됨")
-
-    #         # 2. 모든 아이템에 대해 텍스트(키워드+장르 등) 필드 통합 전처리 (safe_join 적용)
-    #         for item in all_items:
-    #             doc_parts = [
-    #                 item.get('title', ''),
-    #                 safe_join(item.get('keywords', '')),
-    #                 item.get('genre_nm', '')
-    #             ]
-    #             item['doc'] = ' '.join(filter(None, doc_parts))  # 빈 값 제외하고 합침
-
-    #         # 3. 통합 TF-IDF vectorizer 생성 및 벡터 변환
-    #         corpus = [item['doc'] for item in all_items]
-    #         vectorizer = TfidfVectorizer()
-    #         vectors = vectorizer.fit_transform(corpus)
-
-    #         # 4. 벡터 할당
-    #         for item, vector in zip(all_items, vectors):
-    #             item['vector'] = vector
-
-    #         self._logger.info(f"전체 아이템 준비 및 벡터화 완료 (총 {len(all_items)}개)")
-    #         return all_items, vectorizer
-
-    #     except Exception as e:
-    #         self._logger.error(f"아이템 데이터 준비 중 오류 발생: {str(e)}")
-    #         raise
     def _prepare_item_data(self):
         """
         영화, 공연, 전시 데이터를 모두 가져오고 전처리하는 메서드
@@ -250,6 +196,24 @@ class RecommendationAlgorithm:
             self._logger.error(f"사용자 데이터 준비 중 오류 발생: {str(e)}")
             return False
 
+    # def get_ratings_data(self):
+    #     """
+    #     Surprise 모델 학습에 사용할 데이터셋을 준비합니다.
+    #     사용자-아이템-평점 데이터를 pandas.DataFrame 형태로 반환해야 합니다.
+    #     """
+    #     try:
+    #         # 사용자의 평점 데이터를 가져옵니다.
+    #         # 이 데이터는 반드시 [user_id, item_id, rating] 형식을 따릅니다.
+    #         ratings = self._rating_queries.get_ratings_data()  # 사용자 평점 데이터 가져오는 함수
+    #         if ratings is None or ratings.empty:
+    #             raise ValueError("평점 데이터가 비어 있습니다.")
+
+    #         self._logger.info(f"Surprise 데이터 준비 완료: {len(ratings)}개의 평점 데이터")
+    #         return ratings
+    #     except Exception as e:
+    #         self._logger.error(f"Surprise 데이터 준비 중 오류: {str(e)}")
+    #         return None
+
 
 
     def calculate_similarity(self, user_vector, item_vectors):
@@ -356,26 +320,22 @@ class RecommendationAlgorithm:
 
     def get_recommendations(self, user_id: int) -> Dict[str, List[Dict]]:
         """
-        사용자에게 컨텐츠 타입별 추천 아이템을 반환하는 함수
+        사용자에게 추천 아이템을 반환하는 함수
         """
         try:
             self._logger.info(f"사용자 ID {user_id} 추천 시작")
 
-            self._logger.info(f"아이템 데이터 준비")
             # 아이템 데이터 준비
             # 모든 컨텐츠 타입의 아이템을 하나의 리스트로 통합
+            self._logger.info(f"아이템 데이터 준비")
             all_items,vectorizer = self.prepare_item_data()
             all_item_vectors = []
-            #print(all_items)
             if not all_items:
                 self._logger.error("추천할 아이템 데이터가 없습니다.")
                 return []
 
-            #processed_user_data = self.preprocessor.preprocess_user_data(user_profile,vectorizer)
             self._logger.info(f"유저 데이터 전처리")
             processed_user_data = self.prepare_user_data(user_id, vectorizer)
-
-
             if processed_user_data is None:
                 self._logger.warning("사용자 데이터 전처리 실패")
                 return False
@@ -384,15 +344,33 @@ class RecommendationAlgorithm:
                 'vector': processed_user_data[user_id]['vector'],
                 'last_updated': datetime.now()
             }
-            print(self.user_data)
+
             self._logger.info(f"사용자 ID {user_id}의 데이터 준비 완료1")
 
-
             self._logger.info(f"\n=== 전체 아이템 데이터 로드 완료 (총 {len(all_items)}개) ===")
+
+            ## 협력 필터링 추천 알고리즘 코드
+            # # SVD 모델 준비
+            # self._logger.info("SVD 학습 데이터 준비")
+            # ratings_data = self.get_ratings_data()
+            # if ratings_data is None:
+            #     self._logger.error("사용자-아이템 평점 데이터가 없습니다.")
+            #     return []
             
-            self._logger.info(f"all_items 샘플 구조 체크 시작")
-            for idx, item in enumerate(all_items[:10]):
-                self._logger.info(f"샘플 {idx} : {item}")
+            # reader = Reader(rating_scale=(1, 5))
+            # surprise_dataset = Dataset.load_from_df(ratings_data[['user_id','activity_id','rating']], reader)
+            # trainset, testset = train_test_split(surprise_dataset, test_size=0.2)
+
+            # # SVD 모델 학습
+            # self._logger.info("SVD 모델 학습 시작")
+            # svd_model = SVD()
+            # svd_model.fit(trainset)
+            # self._logger.info("SVD 모델 학습 완료")
+
+            # 아이템 유사도 검사 테스트 용 로그 코드            
+            # self._logger.info(f"all_items 샘플 구조 체크 시작")
+            # for idx, item in enumerate(all_items[:10]):
+            #     self._logger.info(f"샘플 {idx} : {item}")
 
             # 컨텐츠 타입별 아이템 수 로깅
             type_counts = {}
@@ -424,6 +402,10 @@ class RecommendationAlgorithm:
 
                         # 유사도 계산
                         similarity = cosine_similarity(user_vector, item_vector)[0][0]
+                        
+                        # # SVD 모델을 사용하여 예측 평점 계산
+                        # activity_id = item['activity_id']
+                        # predicted_rating = svd_model.predict(user_id, activity_id)
 
                         # 추천 아이템 정보 구성
                         recommendation = {
@@ -432,7 +414,8 @@ class RecommendationAlgorithm:
                             'content_type': item['content_type'],
                             'genre_nm': item.get('genre_nm', ''),
                             'keywords': item.get('keywords', ''),
-                            'similarity': float(similarity)
+                            'similarity': float(similarity),
+                            # 'predicted_rating': predicted_rating  # 예측 평점
                         }
                             
                         recommendations.append(recommendation)
@@ -447,6 +430,9 @@ class RecommendationAlgorithm:
                 # 유사도 기준 내림차순 정렬
                 recommendations.sort(key=lambda x: (-x['similarity'], x['activity_id']))
         
+                # # 유사도와 예측 평점 기준 내림차순 정렬 - 예측 평점 우선
+                # recommendations.sort(key=lambda x: (-x['predicted_rating'], -x['similarity'], x['activity_id']))
+
                 # 상위 추천 결과 로깅
                 self._logger.info("=== 상위 추천 결과 ===")
                 for idx, item in enumerate(recommendations[:50], 1):
@@ -461,26 +447,6 @@ class RecommendationAlgorithm:
                 recommendations.sort(key=lambda x: x['similarity'], reverse=True)
                 recommendation_list = [item['activity_id'] for item in recommendations[:50]]
                 return recommendation_list
-
-                # # 유사도가 0보다 큰 항목만 필터링
-                # filtered_recommendations = [item for item in recommendations if item['similarity'] > 0]
-
-                # # 유사도 기준 내림차순 정렬
-                # filtered_recommendations.sort(key=lambda x: x['similarity'], reverse=True)
-
-                # # 상위 추천 결과 로깅
-                # self._logger.info("=== 상위 추천 결과 ===")
-                # for idx, item in enumerate(filtered_recommendations[:50], 1):
-                #     self._logger.info(
-                #         f"{idx}. {item['title']} "
-                #         f"{item['activity_id']} "
-                #         f"(유사도: {item['similarity']:.4f}, "
-                #         f"장르: {item['genre_nm']})"
-                #     )
-
-                # # ID만 추출하여 리스트로 반환
-                # recommendation_list = [item['activity_id'] for item in filtered_recommendations[:15]]
-                # return recommendation_list
 
             except Exception as e:
                 self._logger.error(f"추천 계산 중 오류 발생: {str(e)}")
