@@ -7,3 +7,6 @@ venv/
 *.pyc
 myenv/
 *.txt
+test_item_queries.py
+test.py
+test_user_queries.py
