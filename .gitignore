@@ -8,3 +8,5 @@ venv/
 myenv/
 *.txt
 test/
+chatbot_test_main.py
+test_recommendation.py

@@ -1,16 +1,12 @@
 import openai
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
-from .prompting import FEWSHOT_EXAMPLES
 import random
-
 
 class Chatbot:
     def __init__(self, openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL):
         self.model = model
         # 최신 버전에서 클라이언트 인스턴스를 활용합니다.
         self.client = openai.OpenAI(api_key=openai_api_key)
-
-        self.few_shot_examples = FEWSHOT_EXAMPLES
 
     def generate_next_question(self, dialogue_history):
         # 대화내역을 질문-답변 쌍 형태로 구성
