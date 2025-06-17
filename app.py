@@ -35,7 +35,7 @@ CORS(app)
 # 인스턴스 생성&초기화
 user_queries = UserQueries()
 item_queries = ItemQueries()
-save_preferecne = PreferenceQueries()
+save_preference = PreferenceQueries()
 recommender = RecommendationAlgorithm()
 logging.info("RecommendationAlgorithm 인스턴스 생성 완료")
 chatbot = Chatbot(openai_api_key=OPENAI_API_KEY, model=OPENAI_MODEL)
@@ -88,7 +88,6 @@ def chatbot_answer():
         logging.info("질문 반환")
         end_time = time.time()
         logging.info(f"챗봇 응답 소요 시간: {end_time - start_time:.2f}초")
-        question_id = str(int(questions_id) + 1)  # 다음 질문 ID로 업데이트
         # **reply에는 오직 질문만 반환 (키워드 등은 절대 노출X)**
         return jsonify({'status': 'success', 'reply': next_question}), 200
 
