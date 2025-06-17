@@ -25,36 +25,36 @@
 ---
 
 ## 프로젝트 구조 (AI)
-
-FOREST_AI/
-├── README.md
-├── .env
-├── requirements.txt
-├── sample_data.sql
-├── src/
-│ ├── app.py # Flask API 서버 실행 파일
-│ ├── chatbot/ # 챗봇 및 키워드 추출
-│ │ ├── init.py
-│ │ ├── chatbot_main.py # 챗봇 대화 생성
-│ │ ├── keyword_examples.py # 키워드 예시 데이터
-│ │ ├── keyword_extractor.py # 키워드 추출
-│ │ └── stopwords.py # 불용어
-│ ├── config/
-│ │ ├── init.py
-│ │ └── settings.py
-│ ├── database/ # 데이터 베이스 연동 및 쿼리
-│ │ ├── init.py
-│ │ ├── base.py # 쿼리 실행
-│ │ ├── connection.py # DB 연결
-│ │ ├── item_queries.py # 아이템 데이터 쿼리
-│ │ ├── rating_queries.py # 평점 데이터 쿼리
-│ │ ├── save_preference.py # 추출 키워드 저장
-│ │ └── user_queries.py # 사용자 데이터 쿼리 
-│ └── recommendation/ # 추천 알고리즘
-│ ├── init.py
-│ ├── preprocessor.py # 데이터 전처리
-│ ├── recommendation.py # 추천 알고리즘
-│ └── setup.py
+    ```
+    FOREST_AI/
+    ├── README.md
+    ├── .env
+    ├── requirements.txt
+    ├── sample_data.sql
+    ├── src/
+    │ ├── app.py # Flask API 서버 실행 파일
+    │ ├── chatbot/ # 챗봇 및 키워드 추출
+    │ │ ├── init.py
+    │ │ ├── chatbot_main.py # 챗봇 대화 생성
+    │ │ ├── keyword_examples.py # 키워드 예시 데이터
+    │ │ ├── keyword_extractor.py # 키워드 추출
+    │ │ └── stopwords.py # 불용어
+    │ ├── config/
+    │ │ ├── init.py
+    │ │ └── settings.py
+    │ ├── database/ # 데이터 베이스 연동 및 쿼리
+    │ │ ├── init.py
+    │ │ ├── base.py # 쿼리 실행
+    │ │ ├── connection.py # DB 연결
+    │ │ ├── item_queries.py # 아이템 데이터 쿼리
+    │ │ ├── rating_queries.py # 평점 데이터 쿼리
+    │ │ ├── save_preference.py # 추출 키워드 저장
+    │ │ └── user_queries.py # 사용자 데이터 쿼리 
+    │ └── recommendation/ # 추천 알고리즘
+    │ ├── init.py
+    │ ├── preprocessor.py # 데이터 전처리
+    │ ├── recommendation.py # 추천 알고리즘
+    │ └── setup.py
 
 ---
 
