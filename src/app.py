@@ -14,7 +14,7 @@ from recommendation.recommendation import RecommendationAlgorithm
 from database.user_queries import UserQueries
 from database.item_queries import ItemQueries
 from database.save_preference import PreferenceQueries
-from chatbot.chatbot import Chatbot
+from chatbot.chatbot_main import Chatbot
 from chatbot.keyword_extractor import KeywordExtractor
 from config.settings import OPENAI_API_KEY, OPENAI_MODEL
 
